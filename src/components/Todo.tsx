@@ -23,6 +23,48 @@ import {
 import { useParams } from 'next/navigation';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import {
+  CalendarIcon,
+  CheckCircle2,
+  Clock,
+  Plus,
+  Trash2,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  ArrowUpDown,
+  Info,
+} from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 interface Plan {
   id: string;
@@ -103,12 +145,6 @@ export default function Todo() {
   // Delete confirmation state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [todoToDelete, setTodoToDelete] = useState<ChecklistItem | null>(null);
-
-  // Video suggestions state
-  const [videoSuggestions, setVideoSuggestions] = useState<VideoSuggestion[]>(
-    []
-  );
-  const [loadingVideos, setLoadingVideos] = useState(false);
 
   // Load show/hide preference from localStorage on mount
   useEffect(() => {
@@ -363,6 +399,13 @@ export default function Todo() {
   const cancelEditing = () => {
     setEditingId(null);
     setEditText('');
+  };
+
+  // Check if scheduled time is in the past
+  const isScheduledTimePast = (dateString: string) => {
+    const scheduledDate = new Date(dateString);
+    const now = new Date();
+    return scheduledDate < now;
   };
 
   // Format date for display
@@ -800,48 +843,6 @@ export default function Todo() {
     }
   }, [planId, lastToggleTime]);
 
-  // Fetch video suggestions
-  const fetchVideoSuggestions = async () => {
-    if (!planId) return;
-
-    setLoadingVideos(true);
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/insights/suggest-videos?plan_id=${planId}`,
-        {
-          credentials: 'include',
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch video suggestions');
-      }
-
-      const data = await response.json();
-      setVideoSuggestions(data.result || []);
-    } catch (error) {
-      console.error('Error fetching video suggestions:', error);
-      setError('Failed to load video suggestions');
-    } finally {
-      setLoadingVideos(false);
-    }
-  };
-
-  // Fetch videos when component mounts
-  useEffect(() => {
-    fetchVideoSuggestions();
-  }, [planId]);
-
-  // Extract video ID from YouTube URL
-  const getYouTubeThumbnail = (url: string) => {
-    const videoId = url.match(
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-    )?.[1];
-    return videoId
-      ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
-      : null;
-  };
-
   if (loading) {
     return <div className="py-4">Loading tasks...</div>;
   }
@@ -993,7 +994,7 @@ export default function Todo() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {archivedTodos.map((todo) => (
+              {archivedTodos.map((todo, index) => (
                 <li
                   key={todo.id}
                   className="relative flex items-center justify-between group transition-all duration-200 opacity-60"
@@ -1004,12 +1005,22 @@ export default function Todo() {
                         {todo.description}
                       </label>
                       {todo.scheduledTime && (
-                        <div className="mt-1 text-xs flex items-center text-gray-500">
+                        <div
+                          className={`mt-1 text-xs flex items-center ${
+                            isScheduledTimePast(todo.scheduledTime)
+                              ? 'text-red-500'
+                              : 'text-gray-500'
+                          }`}
+                        >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 20 20"
                             fill="currentColor"
-                            className="w-3 h-3 mr-1 text-orange-400"
+                            className={`w-3 h-3 mr-1 ${
+                              isScheduledTimePast(todo.scheduledTime)
+                                ? 'text-red-500'
+                                : 'text-orange-400'
+                            }`}
                           >
                             <path
                               fillRule="evenodd"
@@ -1021,6 +1032,22 @@ export default function Todo() {
                         </div>
                       )}
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleMoveItem(todo.id, 'up')}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                      disabled={index === 0}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleMoveItem(todo.id, 'down')}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                      disabled={index === archivedTodos.length - 1}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
                   </div>
                   <button
                     onClick={() => confirmDeleteTodo(todo)}
@@ -1080,7 +1107,7 @@ export default function Todo() {
 
       {/* Main Tasks View */}
       {!showSettings && !showArchived && (
-        <div className="animate-slideIn">
+        <div className="space-y-4">
           {/* Only show add form and AI suggestion for non-archived views */}
           {taskType !== 'archived' && (
             <div className="space-y-3">
@@ -1173,7 +1200,7 @@ export default function Todo() {
             </div>
           ) : (
             <ul className="space-y-3 mt-4">
-              {todos?.map((todo) => (
+              {todos?.map((todo, index) => (
                 <li
                   key={todo.id}
                   className={`relative flex items-center justify-between group transition-all duration-200 ${
@@ -1288,12 +1315,22 @@ export default function Todo() {
                               {todo.description}
                             </label>
                             {todo.scheduledTime && (
-                              <div className="mt-1 text-xs flex items-center text-gray-500">
+                              <div
+                                className={`mt-1 text-xs flex items-center ${
+                                  isScheduledTimePast(todo.scheduledTime)
+                                    ? 'text-red-500'
+                                    : 'text-gray-500'
+                                }`}
+                              >
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
                                   viewBox="0 0 20 20"
                                   fill="currentColor"
-                                  className="w-3 h-3 mr-1 text-orange-400"
+                                  className={`w-3 h-3 mr-1 ${
+                                    isScheduledTimePast(todo.scheduledTime)
+                                      ? 'text-red-500'
+                                      : 'text-orange-400'
+                                  }`}
                                 >
                                   <path
                                     fillRule="evenodd"
@@ -1478,104 +1515,6 @@ export default function Todo() {
                   </ul>
                 </div>
               )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Video Suggestions Section */}
-      {!showSettings && !showArchived && (
-        <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-4">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium">Recommended Videos</h3>
-              <div className="relative group">
-                <button
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                  aria-label="Information about video suggestions"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="w-4 h-4"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 shadow-lg">
-                    <p className="text-sm text-white mb-1">
-                      Personalized video recommendations
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Videos are suggested based on your plan&apos;s focus and
-                      tasks
-                    </p>
-                  </div>
-                  <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-white/5 border-r border-b border-white/10 transform rotate-45"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {loadingVideos ? (
-            <div className="py-4 text-center">
-              <p className="text-gray-500 text-sm">
-                Loading video suggestions...
-              </p>
-            </div>
-          ) : videoSuggestions.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {videoSuggestions.map((video, index) => (
-                <a
-                  key={index}
-                  href={video.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:bg-white/10 transition-all duration-200"
-                >
-                  <div className="relative aspect-video">
-                    <img
-                      src={getYouTubeThumbnail(video.url)}
-                      alt={video.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 transition-opacity"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h4 className="text-sm font-medium mb-1 line-clamp-2">
-                      {video.title}
-                    </h4>
-                    <p className="text-xs text-gray-400 line-clamp-2">
-                      {video.description}
-                    </p>
-                  </div>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="py-4 text-center">
-              <p className="text-gray-500 text-sm">
-                No video suggestions available.
-              </p>
             </div>
           )}
         </div>

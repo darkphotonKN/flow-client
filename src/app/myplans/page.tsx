@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Card } from '@/components/ui/card';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Card } from "@/components/ui/card";
 
 // Interface for plan data from API
 interface Plan {
@@ -34,7 +34,7 @@ export default function MyPlans() {
       setError(null);
 
       try {
-        const response = await fetch('http://localhost:6060/api/plans');
+        const response = await fetch("http://localhost:6060/api/plans");
 
         if (!response.ok) {
           throw new Error(`Failed to fetch plans: ${response.statusText}`);
@@ -43,8 +43,8 @@ export default function MyPlans() {
         const data: ApiResponse = await response.json();
         setPlans(data.result || []);
       } catch (err) {
-        console.error('Error fetching plans:', err);
-        setError('Failed to load plans');
+        console.error("Error fetching plans:", err);
+        setError("Failed to load plans");
         // Set empty plans array as fallback
         setPlans([]);
       } finally {
@@ -61,8 +61,8 @@ export default function MyPlans() {
       const response = await fetch(
         `http://localhost:6060/api/plans/${planId}`,
         {
-          method: 'DELETE',
-        }
+          method: "DELETE",
+        },
       );
 
       if (!response.ok) {
@@ -73,8 +73,8 @@ export default function MyPlans() {
       setPlans(plans.filter((plan) => plan.id !== planId));
       setPlanToDelete(null);
     } catch (err) {
-      console.error('Error deleting plan:', err);
-      setError('Failed to delete plan');
+      console.error("Error deleting plan:", err);
+      setError("Failed to delete plan");
     }
   };
 
@@ -106,7 +106,7 @@ export default function MyPlans() {
               <Link
                 href="/create-plan"
                 className="inline-block mt-4 px-6 py-2 rounded-md text-white font-medium transition-colors"
-                style={{ backgroundColor: 'rgb(247, 111, 83)' }}
+                style={{ backgroundColor: "rgb(247, 111, 83)" }}
               >
                 Create New Plan
               </Link>
@@ -120,17 +120,17 @@ export default function MyPlans() {
                       <div className="p-6">
                         <h3
                           className="text-xl font-semibold mb-2"
-                          style={{ color: 'rgb(247, 111, 83)' }}
+                          style={{ color: "rgb(247, 111, 83)" }}
                         >
                           {plan.name}
                         </h3>
                         <div className="text-sm font-medium mb-3 opacity-70">
-                          {plan.planType === 'development'
-                            ? 'Development'
-                            : 'Learning'}
+                          {plan.planType === "development"
+                            ? "Development"
+                            : "Learning"}
                         </div>
                         <p className="opacity-80 line-clamp-3">
-                          {plan.description || 'No description available'}
+                          {plan.description || "No description available"}
                         </p>
                         {plan.focus && (
                           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -193,7 +193,7 @@ export default function MyPlans() {
               <button
                 onClick={() => deletePlan(planToDelete)}
                 className="px-4 py-2 rounded-md text-white font-medium transition-colors"
-                style={{ backgroundColor: 'rgb(247, 111, 83)' }}
+                style={{ backgroundColor: "rgb(247, 111, 83)" }}
               >
                 Delete
               </button>

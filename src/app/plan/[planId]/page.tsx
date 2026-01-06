@@ -7,6 +7,22 @@ import GitHub from "@/components/GitHub";
 import { useEffect, useState, use } from "react";
 import { fetchPlan, PlanDetailData } from "@/services/api";
 
+interface VideoSuggestion {
+  title: string;
+  url: string;
+  source: string;
+  type: string;
+  description: string;
+}
+
+// Extract video ID from YouTube URL
+const getYouTubeThumbnail = (url: string) => {
+  const videoId = url.match(
+    /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
+  )?.[1];
+  return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+};
+
 export default function PlanDetail({
   params,
 }: {
@@ -16,6 +32,10 @@ export default function PlanDetail({
   const [plan, setPlan] = useState<PlanDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loadingVideos, setLoadingVideos] = useState(false);
+  const [videoSuggestions, setVideoSuggestions] = useState<VideoSuggestion[]>(
+    [],
+  );
 
   useEffect(() => {
     async function loadPlanData() {
@@ -43,6 +63,38 @@ export default function PlanDetail({
     loadPlanData();
   }, [planId]);
 
+  useEffect(() => {
+    async function loadVideoSuggestions() {
+      if (!planId) return;
+
+      setLoadingVideos(true);
+      setVideoSuggestions([]);
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/insights/suggest-videos?plan_id=${planId}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch video suggestions");
+        }
+
+        const data = await response.json();
+        setVideoSuggestions(data.result || []);
+      } catch (error) {
+        console.error("Error fetching video suggestions:", error);
+        setError("Failed to load video suggestions");
+      } finally {
+        setLoadingVideos(false);
+      }
+    }
+
+    loadVideoSuggestions();
+  }, [planId]);
+
   return (
     <main className="min-h-screen p-8">
       <div className="relative max-w-7xl mx-auto space-y-8">
@@ -54,10 +106,7 @@ export default function PlanDetail({
           <p className="opacity-80">
             {isLoading
               ? "..."
-              : error
-                ? error
-                : plan?.description ||
-                "Let's continue your development journey."}
+              : plan?.description || "Let's continue your development journey."}
           </p>
 
           <div className="absolute bottom-[20px] right-[20px] z-10">
@@ -189,22 +238,65 @@ export default function PlanDetail({
 
           {/* Fourth Row - Recent Videos only */}
           <Card className="backdrop-blur-sm shadow-sm border-0">
-            <h2 className="text-xl font-semibold p-6 pb-4">Recent Videos</h2>
+            <h2 className="text-xl font-semibold p-6 pb-4">
+              Recommended Videos
+            </h2>
             <div className="space-y-4 p-6 pt-0">
-              <div className="flex space-x-4">
-                <div className="w-32 h-20 bg-gray-500/10 rounded-lg flex-shrink-0"></div>
-                <div>
-                  <p className="font-medium">Advanced React Patterns</p>
-                  <p className="text-sm opacity-70">YouTube • 45 min</p>
+              {loadingVideos ? (
+                <div className="py-4 text-center">
+                  <p className="text-gray-500 text-sm">
+                    Loading video suggestions...
+                  </p>
                 </div>
-              </div>
-              <div className="flex space-x-4">
-                <div className="w-32 h-20 bg-gray-500/10 rounded-lg flex-shrink-0"></div>
-                <div>
-                  <p className="font-medium">TypeScript Best Practices</p>
-                  <p className="text-sm opacity-70">Udemy • 30 min</p>
+              ) : videoSuggestions.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {videoSuggestions.map((video, index) => (
+                    <a
+                      key={index}
+                      href={video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg overflow-hidden hover:bg-white/10 transition-all duration-200"
+                    >
+                      <div className="relative aspect-video">
+                        <img
+                          src={getYouTubeThumbnail(video.url) || ""}
+                          alt={video.title}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            className="w-8 h-8 text-white opacity-80 group-hover:opacity-100 transition-opacity"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h4 className="text-sm font-medium mb-1 line-clamp-2">
+                          {video.title}
+                        </h4>
+                        <p className="text-xs text-gray-400 line-clamp-2">
+                          {video.description}
+                        </p>
+                      </div>
+                    </a>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="py-4 text-center">
+                  <p className="text-gray-500 text-sm">
+                    No video suggestions available.
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
         </div>
