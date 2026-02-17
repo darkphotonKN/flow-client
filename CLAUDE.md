@@ -4,9 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## Project Overview
 
-Flow Client is the frontend for the Fireplace productivity app - a Next.js/React application that helps users manage development and learning plans, track daily and long-term tasks, and receive AI-powered insights to stay focused and productive.
+Flow Client is a modern Next.js/React frontend application that provides an intuitive interface for the Fireplace productivity system, enabling users to manage development projects, learning goals, and daily tasks through a clean, responsive UI with real-time updates and AI-powered assistance.
 
-**Backend**: The Go backend (Fireplace) is located at `~/Documents/Code/Go/fireplace` and runs on port 6060.
+**Core Features:**
+- Dynamic plan management for development and learning projects
+- Dual-mode task system with daily resets and persistent long-term goals
+- Real-time task scheduling with calendar integration
+- AI-powered task suggestions and daily focus recommendations
+- Progress visualization and achievement tracking
+- Archived task history with search capabilities
+- Dark/light theme support with consistent design system
+- GitHub integration panel for development workflows
+- Learning resource suggestions with video recommendations
+
+**User Experience:**
+- Seamless task creation and management with inline editing
+- Drag-and-drop task organization (planned)
+- Responsive design optimized for desktop and tablet use
+- Instant feedback with loading states and error handling
+- Keyboard shortcuts for power users
+- Persistent state management across sessions
+
+**Backend Integration**: Connects to the Go-based Fireplace API running on port 6060, providing real-time synchronization of all productivity data.
 
 ## Architecture & Tech Stack
 
