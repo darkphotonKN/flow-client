@@ -25,6 +25,8 @@ Flow Client is a modern Next.js/React frontend application that provides an intu
 - Keyboard shortcuts for power users
 - Persistent state management across sessions
 
+**Backend Repository:** `~/Documents/Code/Go/fireplace` (Go + Gin + PostgreSQL). When features include backend work, spec updates and implementation should target that repo for BE changes and this repo for FE changes.
+
 **Backend Integration**: Connects to the Go-based Fireplace API running on port 6060, providing real-time synchronization of all productivity data.
 
 ## Architecture & Tech Stack
