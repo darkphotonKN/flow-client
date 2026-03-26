@@ -1,8 +1,8 @@
 import { Note, NoteType, NotePriority, CreateNoteRequest, UpdateNoteRequest, TaskNoteRelation, WarningNote } from '@/types/notes';
 import { ChecklistItem } from './api';
+import { config } from '@/config/environment';
 
-const NOTES_STORAGE_KEY = 'fireplace_notes';
-const NOTES_VERSION = '1.0';
+const API_BASE_URL = config.apiBaseUrl;
 
 export class NotesService {
   private static instance: NotesService;
@@ -16,83 +16,67 @@ export class NotesService {
     return NotesService.instance;
   }
 
-  // Local Storage Operations
-  saveNotes(planId: string, notes: Note[]): void {
-    const storageData = this.getStorageData();
-    storageData[planId] = notes;
-    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify({
-      version: NOTES_VERSION,
-      data: storageData,
-      lastUpdated: new Date().toISOString()
-    }));
-  }
+  // API Operations
+  async createNote(planId: string, request: CreateNoteRequest): Promise<Note> {
+    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
 
-  loadNotes(planId: string): Note[] {
-    const storageData = this.getStorageData();
-    return storageData[planId] || [];
-  }
-
-  private getStorageData(): Record<string, Note[]> {
-    const stored = localStorage.getItem(NOTES_STORAGE_KEY);
-    if (!stored) return {};
-
-    try {
-      const parsed = JSON.parse(stored);
-      if (parsed.version === NOTES_VERSION) {
-        return parsed.data || {};
-      }
-      return {};
-    } catch {
-      return {};
+    if (!response.ok) {
+      throw new Error(`Failed to create note: ${response.statusText}`);
     }
+
+    const data = await response.json();
+    return data.result;
   }
 
-  // CRUD Operations
-  createNote(planId: string, request: CreateNoteRequest): Note {
-    const note: Note = {
-      id: `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      content: request.content,
-      type: request.type,
-      tags: request.tags || [],
-      relatedTaskIds: request.relatedTaskIds || [],
-      planId,
-      priority: request.priority || 'medium',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      isRead: false,
-      isDismissed: false
-    };
+  async loadNotes(planId: string): Promise<Note[]> {
+    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes`);
 
-    const notes = this.loadNotes(planId);
-    notes.push(note);
-    this.saveNotes(planId, notes);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch notes: ${response.statusText}`);
+    }
 
-    return note;
+    const data = await response.json();
+    return data.result || [];
   }
 
-  updateNote(planId: string, noteId: string, updates: UpdateNoteRequest): Note | null {
-    const notes = this.loadNotes(planId);
-    const index = notes.findIndex(n => n.id === noteId);
+  async updateNote(planId: string, noteId: string, updates: UpdateNoteRequest): Promise<Note | null> {
+    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes/${noteId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
 
-    if (index === -1) return null;
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to update note: ${response.statusText}`);
+    }
 
-    notes[index] = {
-      ...notes[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-
-    this.saveNotes(planId, notes);
-    return notes[index];
+    const data = await response.json();
+    return data.result;
   }
 
-  deleteNote(planId: string, noteId: string): boolean {
-    const notes = this.loadNotes(planId);
-    const filtered = notes.filter(n => n.id !== noteId);
+  async deleteNote(planId: string, noteId: string): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes/${noteId}`, {
+      method: 'DELETE',
+    });
 
-    if (filtered.length === notes.length) return false;
+    if (!response.ok) {
+      if (response.status === 404) {
+        return false;
+      }
+      throw new Error(`Failed to delete note: ${response.statusText}`);
+    }
 
-    this.saveNotes(planId, filtered);
     return true;
   }
 
@@ -122,8 +106,32 @@ export class NotesService {
     return [...new Set(tags)]; // Remove duplicates
   }
 
-  // Mock AI Note Generation
-  async generateAINote(
+  // AI Note Generation via Backend API
+  async generateContextualNotes(
+    planId: string,
+    tasks: ChecklistItem[],
+    planFocus: string
+  ): Promise<Note[]> {
+    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes/generate-ai`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        requestType: 'all' // Generate all types of notes
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to generate AI notes: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.result || [];
+  }
+
+  // Mock AI Note Generation (DEPRECATED - kept for backwards compatibility)
+  private async generateAINote(
     planId: string,
     context: {
       tasks: ChecklistItem[];
@@ -223,40 +231,6 @@ export class NotesService {
     return note;
   }
 
-  // Generate multiple contextual notes
-  async generateContextualNotes(
-    planId: string,
-    tasks: ChecklistItem[],
-    planFocus: string
-  ): Promise<Note[]> {
-    const notes: Note[] = [];
-
-    // Generate a warning note
-    const warningNote = await this.generateAINote(planId, {
-      tasks,
-      planFocus,
-      requestType: 'warning'
-    });
-    notes.push(warningNote);
-
-    // Generate an insight note
-    const insightNote = await this.generateAINote(planId, {
-      tasks,
-      planFocus,
-      requestType: 'insight'
-    });
-    notes.push(insightNote);
-
-    // Generate a suggestion note
-    const suggestionNote = await this.generateAINote(planId, {
-      tasks,
-      planFocus,
-      requestType: 'suggestion'
-    });
-    notes.push(suggestionNote);
-
-    return notes;
-  }
 
   // Filter notes
   filterNotes(notes: Note[], criteria: {

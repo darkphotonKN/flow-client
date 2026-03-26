@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import UserProfile from './UserProfile';
 import Logo from './Logo';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 interface LayoutContentProps {
   children: ReactNode;
@@ -13,20 +14,22 @@ interface LayoutContentProps {
 
 export default function LayoutContent({ children }: LayoutContentProps) {
   const { isCollapsed } = useSidebar();
+  const pathname = usePathname();
+  const isHomePage = pathname === '/';
 
   return (
     <>
-      <Sidebar />
+      {!isHomePage && <Sidebar />}
 
       {/* Main content */}
       <div
         className={`transition-all duration-300 ${
-          isCollapsed ? 'ml-0' : 'ml-64'
+          isHomePage ? 'ml-0' : (isCollapsed ? 'ml-0' : 'ml-64')
         }`}
       >
         {/* Top bar with logo and user profile */}
         <div className="fixed top-0 right-0 h-16 bg-layout backdrop-blur-sm z-10"
-             style={{ left: isCollapsed ? '0' : '16rem' }}>
+             style={{ left: isHomePage ? '0' : (isCollapsed ? '0' : '16rem') }}>
           <div className="h-full max-w-7xl mx-auto px-8 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Logo />

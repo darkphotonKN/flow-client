@@ -109,6 +109,7 @@ export function NoteCard({
   };
 
   const getRelatedTasks = () => {
+    if (!note.relatedTaskIds || note.relatedTaskIds.length === 0) return [];
     return checklistItems.filter(task => note.relatedTaskIds.includes(task.id));
   };
 
@@ -157,7 +158,6 @@ export function NoteCard({
                 {note.type}
               </span>
             </div>
-            {getPriorityIcon()}
             {note.aiMetadata && (
               <div className="relative group">
                 <button
@@ -166,14 +166,14 @@ export function NoteCard({
                 >
                   <Info className="w-3 h-3" />
                 </button>
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
-                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-2 shadow-lg">
+                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-48 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999]">
+                  <div className="bg-gray-900 border border-gray-700 rounded-lg p-2 shadow-xl">
                     <p className="text-xs text-white mb-1">{note.aiMetadata.sourceContext}</p>
                     <p className="text-xs text-gray-400">
                       Generated {formatDate(note.aiMetadata.generatedAt)}
                     </p>
                   </div>
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-white/5 border-l border-t border-white/10 transform -rotate-45"></div>
+                  <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-gray-900 border-l border-t border-gray-700 transform -rotate-45"></div>
                 </div>
               </div>
             )}
@@ -226,10 +226,10 @@ export function NoteCard({
         </div>
 
         {/* Tags */}
-        {note.tags.length > 0 && (
+        {note.tags && note.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2">
-            {note.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs">
+            {note.tags?.map(tag => (
+              <Badge key={tag} variant="outline" className="text-xs">
                 <Tag className="h-2 w-2 mr-1" />
                 {tag}
               </Badge>
@@ -238,7 +238,7 @@ export function NoteCard({
         )}
 
         {/* Related Tasks */}
-        {note.relatedTaskIds.length > 0 && (
+        {note.relatedTaskIds && note.relatedTaskIds.length > 0 && (
           <div className="mt-2">
             <Button
               size="sm"

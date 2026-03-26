@@ -122,9 +122,9 @@ export function TaskNoteRelations({
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                       {note.content}
                     </p>
-                    {note.tags.length > 0 && (
+                    {note.tags && note.tags.length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
-                        {note.tags.slice(0, 3).map(tag => (
+                        {note.tags?.slice(0, 3).map(tag => (
                           <Badge key={tag} variant="secondary" className="text-xs h-4 px-1">
                             {tag}
                           </Badge>
@@ -203,9 +203,9 @@ export function TaskNoteRelations({
                 <span>AI Confidence: {Math.round(note.aiMetadata.confidence * 100)}%</span>
               </div>
             )}
-            {note.tags.length > 0 && (
+            {note.tags && note.tags.length > 0 && (
               <div className="flex gap-1 mt-2 flex-wrap">
-                {note.tags.map(tag => (
+                {note.tags?.map(tag => (
                   <Badge key={tag} variant="secondary" className="text-xs">
                     {tag}
                   </Badge>

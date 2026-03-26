@@ -58,9 +58,21 @@ export function NotesContainer({
 
   // Load notes on mount
   useEffect(() => {
-    const loadedNotes = notesService.loadNotes(planId);
-    setState(prev => ({ ...prev, notes: loadedNotes }));
-  }, [planId]);
+    const loadNotes = async () => {
+      try {
+        const loadedNotes = await notesService.loadNotes(planId);
+        setState(prev => ({ ...prev, notes: loadedNotes }));
+      } catch (error) {
+        console.error('Failed to load notes:', error);
+        toast({
+          title: 'Failed to load notes',
+          description: 'Could not retrieve your notes. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    };
+    loadNotes();
+  }, [planId, toast]);
 
   // Get all unique tags
   const allTags = Array.from(
@@ -101,33 +113,42 @@ export function NotesContainer({
   }, [state.notes, state.filterBy, state.selectedTags]);
 
   // Create a new note
-  const handleCreateNote = () => {
+  const handleCreateNote = async () => {
     if (!newNoteContent.trim()) return;
 
-    const tags = notesService.generateTagsFromContent(newNoteContent);
-    const newNote = notesService.createNote(planId, {
-      content: newNoteContent,
-      type: 'user',
-      tags,
-      relatedTaskIds: selectedTaskIds,
-      priority: newNotePriority,
-    });
+    try {
+      const tags = notesService.generateTagsFromContent(newNoteContent);
+      const newNote = await notesService.createNote(planId, {
+        content: newNoteContent,
+        type: 'user',
+        tags,
+        relatedTaskIds: selectedTaskIds,
+        priority: newNotePriority,
+      });
 
-    setState(prev => ({
-      ...prev,
-      notes: [...prev.notes, newNote],
-    }));
+      setState(prev => ({
+        ...prev,
+        notes: [...prev.notes, newNote],
+      }));
 
-    toast({
-      title: 'Note created',
-      description: 'Your note has been saved successfully.',
-    });
+      toast({
+        title: 'Note created',
+        description: 'Your note has been saved successfully.',
+      });
 
-    // Reset form
-    setNewNoteContent('');
-    setNewNotePriority('medium');
-    setSelectedTaskIds([]);
-    setIsCreatingNote(false);
+      // Reset form
+      setNewNoteContent('');
+      setNewNotePriority('medium');
+      setSelectedTaskIds([]);
+      setIsCreatingNote(false);
+    } catch (error) {
+      console.error('Failed to create note:', error);
+      toast({
+        title: 'Failed to create note',
+        description: 'Could not save your note. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Generate AI notes
@@ -162,27 +183,46 @@ export function NotesContainer({
   };
 
   // Update note
-  const handleUpdateNote = (noteId: string, updates: Partial<Note>) => {
-    const updatedNote = notesService.updateNote(planId, noteId, updates);
-    if (updatedNote) {
-      setState(prev => ({
-        ...prev,
-        notes: prev.notes.map(n => n.id === noteId ? updatedNote : n),
-      }));
+  const handleUpdateNote = async (noteId: string, updates: Partial<Note>) => {
+    try {
+      const updatedNote = await notesService.updateNote(planId, noteId, updates);
+      if (updatedNote) {
+        setState(prev => ({
+          ...prev,
+          notes: prev.notes.map(n => n.id === noteId ? updatedNote : n),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update note:', error);
+      toast({
+        title: 'Failed to update note',
+        description: 'Could not update the note. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
   // Delete note
-  const handleDeleteNote = (noteId: string) => {
-    if (notesService.deleteNote(planId, noteId)) {
-      setState(prev => ({
-        ...prev,
-        notes: prev.notes.filter(n => n.id !== noteId),
-      }));
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const deleted = await notesService.deleteNote(planId, noteId);
+      if (deleted) {
+        setState(prev => ({
+          ...prev,
+          notes: prev.notes.filter(n => n.id !== noteId),
+        }));
 
+        toast({
+          title: 'Note deleted',
+          description: 'The note has been removed.',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to delete note:', error);
       toast({
-        title: 'Note deleted',
-        description: 'The note has been removed.',
+        title: 'Failed to delete note',
+        description: 'Could not delete the note. Please try again.',
+        variant: 'destructive',
       });
     }
   };

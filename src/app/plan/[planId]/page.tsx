@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import Todo from "@/components/Todo";
 import GitHub from "@/components/GitHub";
 import { NotesContainer } from "@/components/notes/NotesContainer";
+import { CalendarCard } from "@/components/calendar/CalendarCard";
 import { useEffect, useState, use } from "react";
 import { fetchPlan, PlanDetailData, fetchChecklist, ChecklistItem } from "@/services/api";
 
@@ -137,15 +138,15 @@ export default function PlanDetail({
                   />
                 </svg>
               </button>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 shadow-lg">
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999]">
+                <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-xl">
                   <p className="text-sm text-white mb-1">{plan?.focus}</p>
                   <p className="text-xs text-gray-400">
                     Your focus is one of the primary components that drive the
                     insights and suggestions provided for your plan.
                   </p>
                 </div>
-                <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-white/5 border-l border-t border-white/10 transform -rotate-45"></div>
+                <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-gray-900 border-l border-t border-gray-700 transform -rotate-45"></div>
               </div>
             </div>
           </div>
@@ -170,15 +171,19 @@ export default function PlanDetail({
             />
           </div>
 
-          {/* Second Row - GitHub Activity */}
-          <Card className="backdrop-blur-sm shadow-sm border-0">
-            <h2 className="text-xl font-semibold p-6 pb-4">
-              GitHub Activity
-            </h2>
-            <div className="p-6 pt-0">
-              <GitHub />
-            </div>
-          </Card>
+          {/* Second Row - Calendar and GitHub Activity */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <CalendarCard planId={planId} />
+
+            <Card className="backdrop-blur-sm shadow-sm border-0">
+              <h2 className="text-xl font-semibold p-6 pb-4">
+                GitHub Activity
+              </h2>
+              <div className="p-6 pt-0">
+                <GitHub />
+              </div>
+            </Card>
+          </div>
 
           {/* Fourth Row - Recent Videos only */}
           <Card className="backdrop-blur-sm shadow-sm border-0">

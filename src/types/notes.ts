@@ -14,8 +14,8 @@ export interface Note {
   id: string;
   content: string;
   type: NoteType;
-  tags: string[]; // For categorization
-  relatedTaskIds: string[]; // Direct connections to specific checklist items
+  tags?: string[]; // For categorization
+  relatedTaskIds?: string[]; // Direct connections to specific checklist items
   planId: string;
   createdAt: string;
   updatedAt: string;

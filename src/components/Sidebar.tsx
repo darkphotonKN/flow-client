@@ -183,14 +183,14 @@ export default function Sidebar() {
                     </li>
                   ) : (
                     section.items.map((item) => (
-                      <li key={item.name}>
+                      <li key={item.name} className="group">
                         <Link
                           href={item.href}
-                          className={`flex px-3 py-2 text-sm rounded-md ${
+                          className={`relative flex px-3 py-2 text-sm rounded-md transition-all duration-300 cursor-pointer ${
                             item.isActive
-                              ? 'bg-opacity-30 font-medium'
-                              : 'hover:bg-opacity-20'
-                          } transition-colors cursor-pointer`}
+                              ? 'font-medium'
+                              : ''
+                          }`}
                           style={{
                             backgroundColor: item.isActive
                               ? 'rgba(247, 111, 83, 0.1)'
@@ -200,7 +200,25 @@ export default function Sidebar() {
                               : 'inherit',
                           }}
                         >
-                          {item.name}
+                          {/* Hover gradient effect */}
+                          <span className={`absolute inset-0 rounded-md transition-all duration-300 opacity-0 group-hover:opacity-100 ${
+                            !item.isActive ? 'bg-gradient-to-r from-transparent via-amber-900/10 to-transparent' : ''
+                          }`} />
+
+                          {/* Warm glow effect on hover */}
+                          <span className={`absolute -inset-1 rounded-lg blur-md transition-all duration-500 opacity-0 group-hover:opacity-30 ${
+                            !item.isActive ? 'bg-gradient-to-r from-amber-600/20 via-orange-600/20 to-amber-600/20' : ''
+                          }`} />
+
+                          {/* Left border indicator */}
+                          <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-0 bg-amber-500 transition-all duration-300 ${
+                            item.isActive ? 'h-full' : 'group-hover:h-3/4'
+                          }`} />
+
+                          {/* Text content */}
+                          <span className="relative z-10 transition-all duration-300 group-hover:translate-x-1">
+                            {item.name}
+                          </span>
                         </Link>
                       </li>
                     ))
@@ -213,7 +231,7 @@ export default function Sidebar() {
           {/* Plan Button */}
           <Link
             href="/create-plan"
-            className="block w-full py-2 px-4 rounded-md text-sm font-medium text-center transition-all hover:bg-opacity-10"
+            className="relative block w-full py-2 px-4 rounded-md text-sm font-medium text-center transition-all duration-300 hover:shadow-lg hover:shadow-amber-900/20 group overflow-hidden"
             style={{
               border: '1px solid rgb(247, 111, 83)',
               color: 'rgb(247, 111, 83)',
@@ -222,7 +240,9 @@ export default function Sidebar() {
                 : 'rgba(247, 111, 83, 0.02)',
             }}
           >
-            Create New Plan
+            {/* Animated background on hover */}
+            <span className="absolute inset-0 bg-gradient-to-r from-amber-600/10 via-orange-600/10 to-amber-600/10 translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
+            <span className="relative z-10">Create New Plan</span>
           </Link>
         </nav>
       </aside>
