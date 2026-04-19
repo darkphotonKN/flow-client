@@ -1,5 +1,5 @@
 import { Note, NoteType, NotePriority, CreateNoteRequest, UpdateNoteRequest, TaskNoteRelation, WarningNote } from '@/types/notes';
-import { ChecklistItem } from './api';
+import { ChecklistItem, authFetch } from './api';
 import { config } from '@/config/environment';
 
 const API_BASE_URL = config.apiBaseUrl;
@@ -18,7 +18,7 @@ export class NotesService {
 
   // API Operations
   async createNote(planId: string, request: CreateNoteRequest): Promise<Note> {
-    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes`, {
+    const response = await authFetch(`${API_BASE_URL}/api/plans/${planId}/notes`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,7 +35,7 @@ export class NotesService {
   }
 
   async loadNotes(planId: string): Promise<Note[]> {
-    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes`);
+    const response = await authFetch(`${API_BASE_URL}/api/plans/${planId}/notes`);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch notes: ${response.statusText}`);
@@ -46,7 +46,7 @@ export class NotesService {
   }
 
   async updateNote(planId: string, noteId: string, updates: UpdateNoteRequest): Promise<Note | null> {
-    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes/${noteId}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/plans/${planId}/notes/${noteId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -66,7 +66,7 @@ export class NotesService {
   }
 
   async deleteNote(planId: string, noteId: string): Promise<boolean> {
-    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes/${noteId}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/plans/${planId}/notes/${noteId}`, {
       method: 'DELETE',
     });
 
@@ -112,7 +112,7 @@ export class NotesService {
     tasks: ChecklistItem[],
     planFocus: string
   ): Promise<Note[]> {
-    const response = await fetch(`${API_BASE_URL}/api/plans/${planId}/notes/generate-ai`, {
+    const response = await authFetch(`${API_BASE_URL}/api/plans/${planId}/notes/generate-ai`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

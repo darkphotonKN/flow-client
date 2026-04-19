@@ -1,11 +1,14 @@
 import * as React from 'react';
 
+type ToastPosition = 'bottom-right' | 'bottom-left';
+
 type ToastProps = {
   id: string;
   title?: string;
   description?: string;
   action?: React.ReactNode;
   variant?: 'default' | 'destructive';
+  position?: ToastPosition;
 };
 
 type ToastActionElement = {
@@ -13,7 +16,7 @@ type ToastActionElement = {
   action: () => void;
 };
 
-const TOAST_LIMIT = 1;
+const TOAST_LIMIT = 5;
 const TOAST_REMOVE_DELAY = 5000;
 
 type State = {
@@ -165,4 +168,4 @@ function useToast() {
 }
 
 export { useToast, toast };
-export type { Toast, ToastActionElement };
+export type { Toast, ToastProps, ToastPosition, ToastActionElement };

@@ -859,7 +859,7 @@ export default function Todo() {
               setShowSettings(false);
             }
           }}
-          className="flex items-center text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
+          className="flex items-center text-base text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 mb-4"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -890,7 +890,7 @@ export default function Todo() {
         </h2>
         {!showSettings && !showArchived && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-3 text-base">
               <button
                 onClick={() => setTaskType('daily')}
                 className={`transition-colors hover:opacity-80 ${
@@ -938,7 +938,7 @@ export default function Todo() {
       </div>
 
       {error && (
-        <div className="p-2 text-sm text-red-600 bg-red-50 rounded-md">
+        <div className="p-2 text-base text-red-600 bg-red-50 rounded-md">
           {error}
         </div>
       )}
@@ -948,11 +948,11 @@ export default function Todo() {
         <div className="space-y-6 animate-slideIn">
           <div className="flex items-center justify-between p-4 bg-white/5 dark:bg-gray-800/20 rounded-lg">
             <div>
-              <h3 className="text-sm font-medium mb-1">Refresh daily tasks</h3>
-              <p className="text-xs text-gray-500">
+              <h3 className="text-base font-medium mb-1">Refresh daily tasks</h3>
+              <p className="text-sm text-gray-500">
                 Automatically refresh daily tasks at the start of each day.{' '}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm text-gray-500">
                 This helps you automatically re-setup daily tasks that you may
                 want to work towards daily.
               </p>
@@ -977,8 +977,8 @@ export default function Todo() {
             onClick={() => setShowArchived(true)}
             className="w-full p-4 text-left bg-white/5 dark:bg-gray-800/20 rounded-lg hover:bg-white/10 dark:hover:bg-gray-800/30 transition-colors"
           >
-            <h3 className="text-sm font-medium mb-1">View archived tasks</h3>
-            <p className="text-xs text-gray-500">
+            <h3 className="text-base font-medium mb-1">View archived tasks</h3>
+            <p className="text-sm text-gray-500">
               View and manage your archived tasks
             </p>
           </button>
@@ -990,7 +990,7 @@ export default function Todo() {
         <div className="space-y-4">
           {archivedTodos.length === 0 ? (
             <div className="py-4 text-center">
-              <p className="text-gray-500 text-sm">No archived tasks found.</p>
+              <p className="text-gray-500 text-base">No archived tasks found.</p>
             </div>
           ) : (
             <ul className="space-y-3">
@@ -1001,12 +1001,12 @@ export default function Todo() {
                 >
                   <div className="flex items-center space-x-3 flex-1">
                     <div className="flex flex-col flex-1">
-                      <label className="text-sm cursor-default flex-1">
+                      <label className="text-base cursor-default flex-1">
                         {todo.description}
                       </label>
                       {todo.scheduledTime && (
                         <div
-                          className={`mt-1 text-xs flex items-center ${
+                          className={`mt-1 text-sm flex items-center ${
                             isScheduledTimePast(todo.scheduledTime)
                               ? 'text-red-500'
                               : 'text-gray-500'
@@ -1090,13 +1090,13 @@ export default function Todo() {
                   setShowDeleteModal(false);
                   setTodoToDelete(null);
                 }}
-                className="px-4 py-2 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-sm"
+                className="px-4 py-2 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-sm"
+                className="px-4 py-2 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 text-base"
               >
                 Delete
               </button>
@@ -1119,7 +1119,7 @@ export default function Todo() {
                   placeholder={`Add a new ${
                     taskType === 'daily' ? 'task' : 'goal'
                   }...`}
-                  className="flex-1 px-0 py-0 text-sm bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
+                  className="flex-1 px-0 py-0 text-base bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
                   disabled={isSubmitting || isTyping}
                 />
                 <button
@@ -1138,7 +1138,7 @@ export default function Todo() {
                   disabled={
                     isFetchingSuggestion || isTyping || isSuggestionTyping
                   }
-                  className="text-sm text-gray-600 flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5"
+                  className="text-base text-gray-600 flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5"
                 >
                   {isFetchingSuggestion ? (
                     'Getting suggestion...'
@@ -1160,10 +1160,10 @@ export default function Todo() {
 
               {/* AI Suggestion Component */}
               {suggestion && (
-                <div className="mt-2 p-3 text-sm flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5 dark:bg-gray-900/10">
+                <div className="mt-2 p-3 text-base flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5 dark:bg-gray-900/10">
                   <div className="flex justify-between items-center w-full">
                     <div className="flex items-start">
-                      <div className="ml-2 text-gray-600 text-sm">
+                      <div className="ml-2 text-gray-600 text-base">
                         <p className="text-gray-600 font-medium">
                           generated suggestion
                         </p>
@@ -1178,7 +1178,7 @@ export default function Todo() {
                     <button
                       onClick={useSuggestion}
                       disabled={isTyping || isSuggestionTyping}
-                      className="ml-4 px-2.5 py-0.5 h-[30px] text-xs font-medium rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                      className="ml-4 px-2.5 py-0.5 h-[30px] text-sm font-medium rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
                     >
                       Use suggestion
                     </button>
@@ -1190,7 +1190,7 @@ export default function Todo() {
 
           {todos?.length === 0 ? (
             <div className="py-4 text-center">
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-500 text-base">
                 {taskType === 'daily'
                   ? 'No daily tasks yet. Add one above!'
                   : taskType === 'longterm'
@@ -1215,7 +1215,7 @@ export default function Todo() {
                           type="text"
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
-                          className="flex-1 px-0 py-0 text-sm bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
+                          className="flex-1 px-0 py-0 text-base bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
                           style={{
                             color: todo.done ? 'rgb(247, 111, 83)' : '',
                             textDecoration: todo.done ? 'line-through' : 'none',
@@ -1225,7 +1225,7 @@ export default function Todo() {
                         />
                         <button
                           onClick={() => updateTodoDescription(todo.id)}
-                          className="px-2 py-1 text-xs rounded bg-white/5"
+                          className="px-2 py-1 text-sm rounded bg-white/5"
                           style={{ color: 'rgb(247, 111, 83)' }}
                           disabled={isUpdating}
                         >
@@ -1233,7 +1233,7 @@ export default function Todo() {
                         </button>
                         <button
                           onClick={cancelEditing}
-                          className="px-2 py-1 text-xs rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700"
+                          className="px-2 py-1 text-sm rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700"
                           disabled={isUpdating}
                         >
                           Cancel
@@ -1249,7 +1249,7 @@ export default function Todo() {
                       />
                       <div className="flex flex-1 flex-wrap space-x-2">
                         <label
-                          className={`text-sm cursor-pointer flex-1 ${
+                          className={`text-base cursor-pointer flex-1 ${
                             todo.done ? 'line-through opacity-70' : ''
                           }`}
                         >
@@ -1263,13 +1263,13 @@ export default function Todo() {
                             timeFormat="h:mm aa"
                             timeIntervals={15}
                             dateFormat="MMMM d, yyyy h:mm aa"
-                            className="text-sm p-2 border rounded flex-grow bg-transparent"
+                            className="text-base p-2 border rounded flex-grow bg-transparent"
                             placeholderText="Select date and time"
                             disabled={isScheduling}
                           />
                           <button
                             onClick={scheduleTodo}
-                            className="px-2 py-1 text-xs rounded bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/40 dark:to-orange-800/60 border border-orange-200 dark:border-orange-800"
+                            className="px-2 py-1 text-sm rounded bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/40 dark:to-orange-800/60 border border-orange-200 dark:border-orange-800"
                             style={{ color: 'rgb(247, 111, 83)' }}
                             disabled={isScheduling || !scheduleDate}
                           >
@@ -1277,7 +1277,7 @@ export default function Todo() {
                           </button>
                           <button
                             onClick={cancelScheduling}
-                            className="px-2 py-1 text-xs rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700"
+                            className="px-2 py-1 text-sm rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700"
                             disabled={isScheduling}
                           >
                             Cancel
@@ -1306,7 +1306,7 @@ export default function Todo() {
                           />
                           <div className="flex flex-col flex-1">
                             <label
-                              className={`text-sm cursor-pointer flex-1 ${
+                              className={`text-base cursor-pointer flex-1 ${
                                 todo.done ? 'line-through opacity-70' : ''
                               } ${
                                 newTodoAnimations[todo.id] ? 'relative' : ''
@@ -1316,7 +1316,7 @@ export default function Todo() {
                             </label>
                             {todo.scheduledTime && (
                               <div
-                                className={`mt-1 text-xs flex items-center ${
+                                className={`mt-1 text-sm flex items-center ${
                                   isScheduledTimePast(todo.scheduledTime)
                                     ? 'text-red-500'
                                     : 'text-gray-500'
@@ -1443,7 +1443,7 @@ export default function Todo() {
             <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium">Suggested Daily Tasks</h3>
+                  <h3 className="text-base font-medium">Suggested Daily Tasks</h3>
                   <div className="relative group">
                     <button
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -1464,10 +1464,10 @@ export default function Todo() {
                     </button>
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-3 shadow-lg">
-                        <p className="text-sm text-white mb-1">
+                        <p className="text-base text-white mb-1">
                           Focus on what matters most to you
                         </p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-sm text-gray-400">
                           Daily suggestions are driven by your long-term goals
                           and priorities
                         </p>
@@ -1478,7 +1478,7 @@ export default function Todo() {
                 </div>
                 <button
                   onClick={toggleInsightsVisibility}
-                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   {showInsights ? 'Hide suggestions' : 'Show suggestions'}
                 </button>
@@ -1487,7 +1487,7 @@ export default function Todo() {
               {showInsights && (
                 <div className="space-y-3 p-3 bg-white/5 dark:bg-gray-800/20 rounded-md">
                   <div className="flex justify-end">
-                    <span className="text-xs text-gray-500">
+                    <span className="text-sm text-gray-500">
                       Based on long-term goals
                     </span>
                   </div>
@@ -1502,10 +1502,10 @@ export default function Todo() {
                             : 'opacity-0 translate-y-2'
                         }`}
                       >
-                        <span className="text-sm text-gray-300">{insight}</span>
+                        <span className="text-base text-gray-300">{insight}</span>
                         <button
                           onClick={() => addInsightAsTodo(insight)}
-                          className="text-xs px-2 py-1 rounded bg-white/5 hover:bg-white/10 dark:hover:bg-gray-700/50"
+                          className="text-sm px-2 py-1 rounded bg-white/5 hover:bg-white/10 dark:hover:bg-gray-700/50"
                           style={{ color: 'rgb(247, 111, 83)' }}
                         >
                           Add

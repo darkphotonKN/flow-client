@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
+import { authFetch } from "@/services/api";
 
 // Interface for plan data from API
 interface Plan {
@@ -26,6 +27,7 @@ export default function MyPlans() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   // Fetch plans from API
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function MyPlans() {
       setError(null);
 
       try {
-        const response = await fetch("http://localhost:6060/api/plans");
+        const response = await authFetch("http://localhost:6060/api/plans");
 
         if (!response.ok) {
           throw new Error(`Failed to fetch plans: ${response.statusText}`);
@@ -58,7 +60,7 @@ export default function MyPlans() {
   // Delete plan function
   const deletePlan = async (planId: string) => {
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `http://localhost:6060/api/plans/${planId}`,
         {
           method: "DELETE",
@@ -87,6 +89,17 @@ export default function MyPlans() {
           <p className="opacity-80">
             Manage and track your development and learning plans.
           </p>
+        </div>
+
+        {/* Search Bar */}
+        <div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search plans..."
+            className="w-full px-4 py-3 rounded-xl text-base bg-white/5 dark:bg-gray-900/10 border border-foreground/10 focus:border-[rgb(247,111,83)]/50 focus:ring-1 focus:ring-[rgb(247,111,83)]/30 outline-none placeholder:text-foreground/40 transition-all backdrop-blur-sm"
+          />
         </div>
 
         {/* Plans Section */}
@@ -125,8 +138,8 @@ export default function MyPlans() {
                           {plan.name}
                         </h3>
                         <div className="text-sm font-medium mb-3 opacity-70">
-                          {plan.planType === "development"
-                            ? "Development"
+                          {plan.planType === "project"
+                            ? "Project"
                             : "Learning"}
                         </div>
                         <p className="opacity-80 line-clamp-3">

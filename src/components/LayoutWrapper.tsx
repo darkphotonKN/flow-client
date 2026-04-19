@@ -1,6 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { AuthProvider } from '@/context/AuthContext';
+import { ThemeProvider } from '@/context/ThemeContext';
+import Toaster from '@/components/ui/Toaster';
 
 interface SidebarContextType {
   isCollapsed: boolean;
@@ -19,13 +22,18 @@ interface LayoutWrapperProps {
 }
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
-    <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
-      <div className="min-h-screen bg-layout">
-        {children}
-      </div>
-    </SidebarContext.Provider>
+    <ThemeProvider>
+      <AuthProvider>
+        <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed }}>
+          <div className="min-h-screen bg-layout">
+            {children}
+            <Toaster />
+          </div>
+        </SidebarContext.Provider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

@@ -3,6 +3,34 @@ import { config } from "@/config/environment";
 // API base URL from environment config
 const API_BASE_URL = config.apiBaseUrl;
 
+/**
+ * Authenticated fetch wrapper. Attaches Bearer token from localStorage.
+ * On 401: clears tokens and redirects to /auth.
+ */
+export async function authFetch(
+  url: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const token = localStorage.getItem("accessToken");
+
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401) {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    window.location.href = "/auth";
+    throw new Error("Unauthorized");
+  }
+
+  return response;
+}
+
 export const scope = {
   longterm: "longterm",
   daily: "daily",
@@ -86,7 +114,7 @@ export interface ApiResponse {
  * Fetch Plan Information
  */
 export const fetchPlan = async (id: string): Promise<PlanDetailResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/plans/${id}`);
+  const response = await authFetch(`${API_BASE_URL}/api/plans/${id}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch checklist: ${response.statusText}`);
@@ -103,7 +131,7 @@ export const fetchChecklist = async (
   scope: "daily" | "longterm" = "daily",
   archived: boolean = false,
 ): Promise<ChecklistResponse> => {
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE_URL}/api/plans/${planId}/checklists?scope=${scope}&archived=${archived}`,
   );
 
@@ -122,7 +150,7 @@ export const createChecklistItem = async (
   planId: string,
   scope: "daily" | "longterm" = "daily",
 ): Promise<ChecklistItem> => {
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE_URL}/api/plans/${planId}/checklists`,
     {
       method: "POST",
@@ -152,7 +180,7 @@ export const updateChecklistItem = async (
   scope: "daily" | "longterm" = "daily",
 ): Promise<UpdateChecklistItemResponse> => {
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE_URL}/api/plans/${planId}/checklists/${id}?scope=${scope}`,
       {
         method: "PATCH",
@@ -186,7 +214,7 @@ export const deleteChecklistItem = async (
   scope: "daily" | "longterm" = "daily",
 ): Promise<DeleteChecklistItemResponse> => {
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE_URL}/api/plans/${planId}/checklists/${id}?scope=${scope}`,
       {
         method: "DELETE",
@@ -211,7 +239,7 @@ export const getChecklistSuggestion = async (
   scope: "daily" | "longterm" = "daily",
 ): Promise<ChecklistSuggestionResponse> => {
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE_URL}/api/insights/checklist-suggestion?plan_id=${planId}&scope=${scope}`,
     );
 
@@ -243,7 +271,7 @@ export const scheduleChecklistItem = async (
   scope: "daily" | "longterm" = "daily",
 ): Promise<UpdateChecklistItemResponse> => {
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE_URL}/api/plans/${planId}/checklists/${id}/schedule?scope=${scope}`,
       {
         method: "PATCH",
@@ -275,7 +303,7 @@ export const getDailyInsights = async (
   planId: string,
 ): Promise<DailyInsightsResponse> => {
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `${config.apiBaseUrl}/api/insights/checklist-suggestion-daily?plan_id=${planId}`,
     );
 
@@ -305,7 +333,7 @@ export const archiveChecklistItem = async (
 ): Promise<UpdateChecklistItemResponse> => {
   try {
     console.log("planId:", planId, " checklist id:", id);
-    const response = await fetch(
+    const response = await authFetch(
       `${API_BASE_URL}/api/plans/${planId}/checklists/${id}/archive?scope=${scope}`,
       {
         method: "PATCH",
@@ -336,7 +364,7 @@ export const fetchArchivedChecklist = async (
   planId: string,
   scope: "daily" | "longterm" = "daily",
 ): Promise<ChecklistResponse> => {
-  const response = await fetch(
+  const response = await authFetch(
     `${API_BASE_URL}/api/plans/${planId}/checklists/archived?scope=${scope}`,
   );
 
@@ -352,11 +380,10 @@ export const fetchArchivedChecklist = async (
 export const toggleDailyReset = async (
   planId: string,
 ): Promise<ApiResponse> => {
-  const response = await fetch(
-    `http://localhost:6060/api/plans/${planId}/toggle-daily-reset`,
+  const response = await authFetch(
+    `${API_BASE_URL}/api/plans/${planId}/toggle-daily-reset`,
     {
       method: "PATCH",
-      credentials: "include",
     },
   );
 
@@ -367,14 +394,126 @@ export const toggleDailyReset = async (
   return response.json();
 };
 
+// --- Auth ---
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SignInResponse {
+  statusCode: number;
+  message: string;
+  result: {
+    accessToken: string;
+    refreshToken: string;
+    accessExpiresIn: number;
+    refreshExpiresIn: number;
+    userInfo: AuthUser;
+  };
+}
+
+export interface SignUpResponse {
+  statusCode: number;
+  message: string;
+}
+
+export const signIn = async (
+  email: string,
+  password: string,
+): Promise<SignInResponse> => {
+  const response = await fetch(`${API_BASE_URL}/api/users/signin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Sign in failed");
+  }
+
+  return data;
+};
+
+export const signUp = async (
+  name: string,
+  email: string,
+  password: string,
+): Promise<SignUpResponse> => {
+  const response = await fetch(`${API_BASE_URL}/api/users/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Sign up failed");
+  }
+
+  return data;
+};
+
+// --- User Profile ---
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  displayName: string | null;
+  bio: string | null;
+  created_at: string;
+}
+
+export interface UserProfileResponse {
+  statusCode: number;
+  message: string;
+  result: UserProfile;
+}
+
+export interface UpdateProfileRequest {
+  name?: string;
+  displayName?: string;
+  bio?: string;
+}
+
+export const getProfile = async (): Promise<UserProfileResponse> => {
+  const response = await authFetch(`${API_BASE_URL}/api/users/profile`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch profile: ${response.statusText}`);
+  }
+
+  return await response.json();
+};
+
+export const updateProfile = async (
+  updates: UpdateProfileRequest,
+): Promise<UserProfileResponse> => {
+  const response = await authFetch(`${API_BASE_URL}/api/users/profile`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update profile: ${response.statusText}`);
+  }
+
+  return await response.json();
+};
+
 export const fetchPlanDetails = async (
   planId: string,
 ): Promise<PlanResponse> => {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/plans/${planId}`,
-    {
-      credentials: "include",
-    },
+  const response = await authFetch(
+    `${API_BASE_URL}/api/plans/${planId}`,
   );
 
   if (!response.ok) {

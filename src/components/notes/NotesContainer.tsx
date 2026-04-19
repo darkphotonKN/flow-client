@@ -298,7 +298,7 @@ export function NotesContainer({
                 <select
                   value={newNotePriority}
                   onChange={(e) => setNewNotePriority(e.target.value as NotePriority)}
-                  className="px-3 py-1 text-sm border rounded-md"
+                  className="px-3 py-1 text-base border rounded-md"
                 >
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>

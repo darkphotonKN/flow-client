@@ -28,29 +28,31 @@
   --radius: 0.5rem;
 }
 
-/* dark mode colors via media query */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: 0 0% 12%; /* #1f1f1f */
-    --foreground: 43 10% 82%; /* #d1cfc0 */
+/* dark mode colors via .dark class */
+.dark {
+  --background: 0 0% 12%; /* #1f1f1f */
+  --foreground: 43 10% 82%; /* #d1cfc0 */
 
-    /* Update card variables for dark mode */
-    --card: 0 0% 10%; /* Slightly darker than background */
-    --card-foreground: 43 10% 82%; /* Same as foreground */
-    --popover: 0 0% 10%;
-    --popover-foreground: 43 10% 82%;
-    --border: 12 15% 20%; /* Warmer dark border with hint of primary */
-    --input: 0 0% 20%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 43 10% 60%;
-    --accent: 12 92% 15%;
-    --accent-foreground: 43 10% 90%;
-  }
+  /* Update card variables for dark mode */
+  --card: 0 0% 10%; /* Slightly darker than background */
+  --card-foreground: 43 10% 82%; /* Same as foreground */
+  --popover: 0 0% 10%;
+  --popover-foreground: 43 10% 82%;
+  --border: 12 15% 20%; /* Warmer dark border with hint of primary */
+  --input: 0 0% 20%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 43 10% 60%;
+  --accent: 12 92% 15%;
+  --accent-foreground: 43 10% 90%;
 }
 
 /* apply background color based on light/dark mode */
 .bg-layout {
   background-color: rgb(242, 240, 227); /* light mode background */
+}
+
+.dark .bg-layout {
+  background-color: #1f1f1f; /* dark mode background */
 }
 
 /* basic text styles */
@@ -83,17 +85,11 @@ p {
 }
 
 /* dark mode overrides */
-@media (prefers-color-scheme: dark) {
-  .bg-layout {
-    background-color: #1f1f1f; /* dark mode background */
-  }
-
-  body,
-  p,
-  h2,
-  h3 {
-    color: rgb(209, 207, 192); /* #d1cfc0 */
-  }
-
-  /* h1 keeps its color in dark mode */
+.dark body,
+.dark p,
+.dark h2,
+.dark h3 {
+  color: rgb(209, 207, 192); /* #d1cfc0 */
 }
+
+/* h1 keeps its color in dark mode */

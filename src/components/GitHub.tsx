@@ -60,7 +60,7 @@ export default function GitHub() {
 
       {!repo ? (
         <div className="border rounded-lg p-6">
-          <p className="mb-3 text-sm">
+          <p className="mb-3 text-base">
             Connect your GitHub repository to track changes and progress.
           </p>
           <form onSubmit={handleConnect} className="flex flex-col space-y-3">
@@ -69,21 +69,21 @@ export default function GitHub() {
               value={inputUrl}
               onChange={(e) => setInputUrl(e.target.value)}
               placeholder="https://github.com/username/repository"
-              className="p-2 border rounded w-full"
+              className="p-2 text-base border rounded w-full"
               style={{ backgroundColor: "transparent" }}
             />
             <div>
               <button
                 type="submit"
                 disabled={!inputUrl || isConnecting}
-                className="px-4 py-2 rounded text-white disabled:opacity-50"
+                className="px-4 py-2 text-base rounded text-white disabled:opacity-50"
                 style={{ backgroundColor: "rgb(247, 111, 83)" }}
               >
                 {isConnecting ? "Connecting..." : "Connect Repository"}
               </button>
             </div>
           </form>
-          <p className="mt-4 text-xs opacity-70">
+          <p className="mt-4 text-sm opacity-70">
             <a
               href="https://docs.github.com/en/rest"
               target="_blank"

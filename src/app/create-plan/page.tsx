@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
+import { authFetch } from '@/services/api';
+import { toast } from '@/components/ui/use-toast';
 
 // Define plan types for the dropdown
 const PLAN_TYPES = [
-  { value: 'project', label: 'Development' },
+  { value: 'project', label: 'Project' },
   { value: 'learning', label: 'Learning' },
 ];
 
@@ -25,17 +27,20 @@ interface ApiResponse {
 
 export default function CreatePlan() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Form state
+  // Form state — pre-fill from query params if coming from dashboard
   const [formData, setFormData] = useState({
-    name: '',
-    focus: '',
+    name: searchParams.get('name') || '',
+    focus: searchParams.get('focus') || '',
     description: '',
-    planType: 'development',
+    planType: searchParams.get('planType') || 'project',
   });
+
+  const prefilled = !!searchParams.get('name');
 
   // Handle form input changes
   const handleChange = (
@@ -57,7 +62,7 @@ export default function CreatePlan() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:6060/api/plans', {
+      const response = await authFetch('http://localhost:6060/api/plans', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,13 +79,14 @@ export default function CreatePlan() {
       const newPlanId = data.result.id;
 
       setSuccess(true);
+      toast({ title: 'Plan created' });
 
       // Reset form
       setFormData({
         name: '',
         focus: '',
         description: '',
-        planType: 'development',
+        planType: 'project',
       });
 
       // Redirect to home page with the new plan_id
@@ -109,13 +115,13 @@ export default function CreatePlan() {
             </h1>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 text-red-400 text-sm rounded-md">
+              <div className="mb-4 p-3 bg-red-500/10 text-red-400 text-base rounded-md">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 p-3 bg-green-500/10 text-green-400 text-sm rounded-md">
+              <div className="mb-4 p-3 bg-green-500/10 text-green-400 text-base rounded-md">
                 Plan created successfully! Redirecting to your new plan...
               </div>
             )}
@@ -124,7 +130,7 @@ export default function CreatePlan() {
               <div>
                 <label
                   htmlFor="name"
-                  className="block text-sm font-medium opacity-80 mb-1"
+                  className="block text-base font-medium opacity-80 mb-1"
                 >
                   Plan Name
                 </label>
@@ -136,7 +142,7 @@ export default function CreatePlan() {
                   onChange={handleChange}
                   placeholder="NextJS Portfolio Website"
                   required
-                  className="w-full px-4 py-2 border rounded-md text-sm bg-white/5 border-gray-700 placeholder-gray-500"
+                  className="w-full px-4 py-2 border rounded-md text-base bg-white/5 border-gray-700 placeholder-gray-500"
                   disabled={isSubmitting || success}
                 />
               </div>
@@ -144,7 +150,7 @@ export default function CreatePlan() {
               <div>
                 <label
                   htmlFor="focus"
-                  className="block text-sm font-medium opacity-80 mb-1"
+                  className="block text-base font-medium opacity-80 mb-1"
                 >
                   Focus
                 </label>
@@ -156,7 +162,7 @@ export default function CreatePlan() {
                   onChange={handleChange}
                   placeholder="Building a modern portfolio website using NextJS..."
                   required
-                  className="w-full px-4 py-2 border rounded-md text-sm bg-white/5 border-gray-700 placeholder-gray-500"
+                  className="w-full px-4 py-2 border rounded-md text-base bg-white/5 border-gray-700 placeholder-gray-500"
                   disabled={isSubmitting || success}
                 />
               </div>
@@ -164,7 +170,7 @@ export default function CreatePlan() {
               <div>
                 <label
                   htmlFor="description"
-                  className="block text-sm font-medium opacity-80 mb-1"
+                  className="block text-base font-medium opacity-80 mb-1"
                 >
                   Description
                 </label>
@@ -173,10 +179,10 @@ export default function CreatePlan() {
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="A personal portfolio site with sections for..."
+                  placeholder={prefilled ? "Add a quick description to get started..." : "A personal portfolio site with sections for..."}
                   required
                   rows={3}
-                  className="w-full px-4 py-2 border rounded-md text-sm bg-white/5 border-gray-700 placeholder-gray-500"
+                  className="w-full px-4 py-2 border rounded-md text-base bg-white/5 border-gray-700 placeholder-gray-500"
                   disabled={isSubmitting || success}
                 />
               </div>
@@ -184,7 +190,7 @@ export default function CreatePlan() {
               <div>
                 <label
                   htmlFor="planType"
-                  className="block text-sm font-medium opacity-80 mb-1"
+                  className="block text-base font-medium opacity-80 mb-1"
                 >
                   Plan Type
                 </label>
@@ -194,7 +200,7 @@ export default function CreatePlan() {
                   value={formData.planType}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 border rounded-md text-sm bg-white/5 border-gray-700"
+                  className="w-full px-4 py-2 border rounded-md text-base bg-white/5 border-gray-700"
                   disabled={isSubmitting || success}
                 >
                   {PLAN_TYPES.map((type) => (
@@ -209,7 +215,7 @@ export default function CreatePlan() {
                 <button
                   type="submit"
                   disabled={isSubmitting || success}
-                  className="w-full px-4 py-2 rounded-md text-white font-medium transition-colors"
+                  className="w-full px-4 py-2 rounded-md text-base text-white font-medium transition-colors"
                   style={{
                     backgroundColor:
                       isSubmitting || success
