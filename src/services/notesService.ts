@@ -151,7 +151,11 @@ export class NotesService {
 
     switch (requestType) {
       case 'warning':
-        const overdueTasks = tasks.filter(t => !t.done && t.scheduledTime && new Date(t.scheduledTime) < new Date());
+        const overdueTasks = tasks.filter(t => {
+          if (t.done) return false;
+          const due = t.dueDate ?? t.scheduledTime;
+          return due && new Date(due) < new Date();
+        });
         if (overdueTasks.length > 0) {
           content = `⚠️ You have ${overdueTasks.length} overdue task${overdueTasks.length > 1 ? 's' : ''}. Consider reprioritizing or breaking them down into smaller steps.`;
           priority = overdueTasks.length > 2 ? 'high' : 'medium';

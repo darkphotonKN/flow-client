@@ -41,8 +41,46 @@ export interface ChecklistItem {
   id: string;
   description: string;
   done: boolean;
-  scheduledTime?: string; // ISO date string for scheduled items
+  /** @deprecated Backend dropped scheduled_time. UI still reads it where present
+   *  for legacy schedule UX in Todo; the value now comes from start_date and is
+   *  date-only (midnight UTC). New code should use startDate / dueDate. */
+  scheduledTime?: string;
+  /** ISO date string (YYYY-MM-DD) — Plan Calendar Gantt range start. */
+  startDate?: string;
+  /** ISO date string (YYYY-MM-DD) — Plan Calendar Gantt range end. */
+  dueDate?: string;
   scope?: ScopeEnum;
+}
+
+export interface CalendarItem {
+  id: string;
+  description: string;
+  scope: string;
+  done: boolean;
+  /** "" when null on the backend. */
+  startDate: string;
+  /** "" when null on the backend. */
+  dueDate: string;
+}
+
+export interface CalendarResponse {
+  statusCode: number;
+  message: string;
+  result: {
+    planId: string;
+    view: "week" | "month";
+    windowStart: string;
+    windowEnd: string;
+    items: CalendarItem[];
+  };
+}
+
+export type CalendarView = "week" | "month";
+
+export interface UpdateChecklistDatesRequest {
+  /** Omit to leave unchanged; null to clear; "YYYY-MM-DD" to set. */
+  startDate?: string | null;
+  dueDate?: string | null;
 }
 
 export interface ChecklistResponse {
@@ -109,6 +147,49 @@ export interface ApiResponse {
   message: string;
   result: "success" | "failure";
 }
+
+export interface SearchPlan {
+  id: string;
+  name: string;
+  focus: string;
+  description: string;
+  planType: string;
+  dailyReset: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SearchPlansResponse {
+  statusCode: number;
+  message: string;
+  result: SearchPlan[];
+}
+
+/**
+ * Search plans by term with pagination.
+ * Backend requires `term` to be non-empty; limit/offset are passed as strings
+ * per the SearchParam struct's `form:"limit"` / `form:"offset"` tags.
+ * Response has no total count — caller detects "last page" by checking if
+ * the returned array has fewer than `limit` items.
+ */
+export const searchPlans = async (
+  term: string,
+  limit: number,
+  offset: number,
+): Promise<SearchPlansResponse> => {
+  const params = new URLSearchParams({
+    term,
+    limit: String(limit),
+    offset: String(offset),
+  });
+  const response = await authFetch(
+    `${API_BASE_URL}/api/plans/search?${params.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to search plans: ${response.statusText}`);
+  }
+  return await response.json();
+};
 
 /**
  * Fetch Plan Information
@@ -262,38 +343,76 @@ export const getChecklistSuggestion = async (
 };
 
 /**
- * Schedule a checklist item
+ * Update startDate / dueDate for a checklist item.
+ * Body fields are optional with three-state semantics:
+ *   - absent key      → leave column unchanged
+ *   - explicit null   → clear column
+ *   - "YYYY-MM-DD"    → set column
+ * Backend validates start_date <= due_date post-merge with the current row.
  */
-export const scheduleChecklistItem = async (
-  id: string,
+export const updateChecklistDates = async (
   planId: string,
-  scheduleTime: Date,
-  scope: "daily" | "longterm" = "daily",
+  checklistId: string,
+  body: UpdateChecklistDatesRequest,
 ): Promise<UpdateChecklistItemResponse> => {
   try {
     const response = await authFetch(
-      `${API_BASE_URL}/api/plans/${planId}/checklists/${id}/schedule?scope=${scope}`,
+      `${API_BASE_URL}/api/plans/${planId}/checklists/${checklistId}/dates`,
       {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ scheduledTime: scheduleTime.toISOString() }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       },
     );
 
     if (!response.ok) {
       throw new Error(
-        `Failed to schedule checklist item: ${response.statusText}`,
+        `Failed to update checklist dates: ${response.statusText}`,
       );
     }
 
     const data = await response.json();
-    return { result: "success", item: data };
+    return { result: "success", item: data.result };
   } catch (err) {
-    console.error("Failed to schedule checklist item:", err);
+    console.error("Failed to update checklist dates:", err);
     return { result: "failure" };
   }
+};
+
+/**
+ * Legacy schedule call — kept for backwards-compat with Todo's schedule UI.
+ * The backend /schedule endpoint was removed; this now PATCHes /dates with
+ * a date-only startDate (time-of-day is dropped — known regression).
+ */
+export const scheduleChecklistItem = async (
+  id: string,
+  planId: string,
+  scheduleTime: Date,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _scope: "daily" | "longterm" = "daily",
+): Promise<UpdateChecklistItemResponse> => {
+  const startDate = scheduleTime.toISOString().slice(0, 10);
+  return updateChecklistDates(planId, id, { startDate });
+};
+
+/**
+ * Fetch the per-plan calendar items for a window.
+ * @param view "week" or "month"
+ * @param date "YYYY-MM-DD" for week view, "YYYY-MM" for month view
+ */
+export const getPlanCalendar = async (
+  planId: string,
+  view: CalendarView,
+  date: string,
+): Promise<CalendarResponse> => {
+  const params = new URLSearchParams({ view, date });
+  const response = await authFetch(
+    `${API_BASE_URL}/api/plans/${planId}/calendar?${params.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch calendar: ${response.statusText}`);
+  }
+  return await response.json();
 };
 
 /**
