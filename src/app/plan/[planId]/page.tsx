@@ -2,7 +2,6 @@
 
 import { Card } from "@/components/ui/card";
 import Todo from "@/components/Todo";
-import GitHub from "@/components/GitHub";
 import { NotesContainer } from "@/components/notes/NotesContainer";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
 import { useEffect, useState, use } from "react";
@@ -113,7 +112,7 @@ export default function PlanDetail({
           <h1 className="text-4xl font-bold mb-2">
             {isLoading ? "Loading..." : plan?.name || "Plan Details"}
           </h1>
-          <p className="opacity-80">
+          <p className="text-lg opacity-80">
             {isLoading
               ? "..."
               : plan?.description || "Let's continue your development journey."}
@@ -171,19 +170,8 @@ export default function PlanDetail({
             />
           </div>
 
-          {/* Second Row - Calendar and GitHub Activity */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <CalendarCard planId={planId} />
-
-            <Card className="backdrop-blur-sm shadow-sm border-0">
-              <h2 className="text-xl font-semibold p-6 pb-4">
-                GitHub Activity
-              </h2>
-              <div className="p-6 pt-0">
-                <GitHub />
-              </div>
-            </Card>
-          </div>
+          {/* Second Row - Calendar (full width) */}
+          <CalendarCard planId={planId} />
 
           {/* Fourth Row - Recent Videos only */}
           <Card className="backdrop-blur-sm shadow-sm border-0">

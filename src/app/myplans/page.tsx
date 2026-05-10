@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { authFetch } from "@/services/api";
+import { authFetch, searchPlans } from "@/services/api";
+import { useTheme } from "@/context/ThemeContext";
+
+const PAGE_SIZE = 10;
+const SEARCH_DEBOUNCE_MS = 300;
 
 // Interface for plan data from API
 interface Plan {
@@ -23,39 +27,108 @@ interface ApiResponse {
 
 export default function MyPlans() {
   // State for plans
-  const [plans, setPlans] = useState<Plan[]>([]);
+  // - `allPlans` holds the full list returned by GET /api/plans when not searching.
+  //   We paginate it client-side because that endpoint doesn't accept limit/offset.
+  // - `searchResults` holds just the current page returned by GET /api/plans/search.
+  const [allPlans, setAllPlans] = useState<Plan[]>([]);
+  const [searchResults, setSearchResults] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(0); // 0-indexed
 
-  // Fetch plans from API
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+
+  const isSearching = debouncedSearch.length > 0;
+
+  // Derive the plans to render + whether another page exists.
+  // Search mode: server-side pagination via your /api/plans/search endpoint.
+  // Default mode: client-side slicing over the full list.
+  const plans = isSearching
+    ? searchResults
+    : allPlans.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const hasMore = isSearching
+    ? searchResults.length === PAGE_SIZE
+    : (page + 1) * PAGE_SIZE < allPlans.length;
+
+  // Debounce the search input and reset pagination on every new term
   useEffect(() => {
-    const fetchPlans = async () => {
+    const timer = setTimeout(() => {
+      const trimmed = search.trim();
+      setDebouncedSearch((prev) => {
+        if (prev !== trimmed) {
+          setPage(0); // new query → back to first page
+        }
+        return trimmed;
+      });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Load plans: either the full list (no search) or the paginated search results
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await authFetch("http://localhost:6060/api/plans");
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch plans: ${response.statusText}`);
+        if (!debouncedSearch) {
+          // No search term — fetch all plans (existing endpoint, no pagination)
+          const response = await authFetch("http://localhost:6060/api/plans");
+          if (!response.ok) {
+            throw new Error(`Failed to fetch plans: ${response.statusText}`);
+          }
+          const data: ApiResponse = await response.json();
+          if (cancelled) return;
+          setAllPlans(data.result || []);
+          setSearchResults([]);
+        } else {
+          // Search mode — use the paginated search endpoint
+          const data = await searchPlans(
+            debouncedSearch,
+            PAGE_SIZE,
+            page * PAGE_SIZE,
+          );
+          if (cancelled) return;
+          setSearchResults(data.result || []);
         }
-
-        const data: ApiResponse = await response.json();
-        setPlans(data.result || []);
       } catch (err) {
-        console.error("Error fetching plans:", err);
-        setError("Failed to load plans");
-        // Set empty plans array as fallback
-        setPlans([]);
+        if (cancelled) return;
+        console.error("Error loading plans:", err);
+        setError(
+          debouncedSearch
+            ? "Failed to search plans"
+            : "Failed to load plans",
+        );
+        if (debouncedSearch) {
+          setSearchResults([]);
+        } else {
+          setAllPlans([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    fetchPlans();
-  }, []);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, page]);
+
+  // Clamp page if the underlying list shrinks below the current page's start
+  // (e.g. after a delete takes us past the last page of the client-side slice).
+  useEffect(() => {
+    if (isSearching) return;
+    const maxPage = Math.max(0, Math.ceil(allPlans.length / PAGE_SIZE) - 1);
+    if (page > maxPage) setPage(maxPage);
+  }, [allPlans, page, isSearching]);
 
   // Delete plan function
   const deletePlan = async (planId: string) => {
@@ -71,8 +144,12 @@ export default function MyPlans() {
         throw new Error(`Failed to delete plan: ${response.statusText}`);
       }
 
-      // Remove the deleted plan from the state
-      setPlans(plans.filter((plan) => plan.id !== planId));
+      // Remove the deleted plan from whichever list we're displaying
+      if (isSearching) {
+        setSearchResults((prev) => prev.filter((p) => p.id !== planId));
+      } else {
+        setAllPlans((prev) => prev.filter((p) => p.id !== planId));
+      }
       setPlanToDelete(null);
     } catch (err) {
       console.error("Error deleting plan:", err);
@@ -102,6 +179,24 @@ export default function MyPlans() {
           />
         </div>
 
+        {/* Create New Plan — mirrors the sidebar's + New Plan button, right-aligned below the search bar */}
+        <div className="flex justify-end -mt-6">
+          <Link
+            href="/create-plan"
+            className="relative inline-block py-2 px-4 rounded-md text-base font-medium text-center transition-all duration-300 hover:shadow-lg hover:shadow-amber-900/20 group overflow-hidden whitespace-nowrap"
+            style={{
+              border: "1px solid rgb(247, 111, 83)",
+              color: "rgb(247, 111, 83)",
+              backgroundColor: isDarkMode
+                ? "rgba(247, 111, 83, 0.05)"
+                : "rgba(247, 111, 83, 0.02)",
+            }}
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-amber-600/10 via-orange-600/10 to-amber-600/10 translate-x-full group-hover:translate-x-0 transition-transform duration-500" />
+            <span className="relative z-10">+ New Plan</span>
+          </Link>
+        </div>
+
         {/* Plans Section */}
         <div className="space-y-6">
           {isLoading ? (
@@ -112,45 +207,66 @@ export default function MyPlans() {
           ) : error ? (
             <div className="text-center py-12 text-red-500">{error}</div>
           ) : plans.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                No plans found. Create your first plan!
-              </p>
-              <Link
-                href="/create-plan"
-                className="inline-block mt-4 px-6 py-2 rounded-md text-white font-medium transition-colors"
-                style={{ backgroundColor: "rgb(247, 111, 83)" }}
-              >
-                Create New Plan
-              </Link>
-            </div>
+            isSearching ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">
+                  No plans match &ldquo;{debouncedSearch}&rdquo;
+                  {page > 0 ? " on this page" : ""}.
+                </p>
+                {page > 0 && (
+                  <button
+                    onClick={() => setPage(0)}
+                    className="inline-block mt-4 px-6 py-2 rounded-md text-base font-medium transition-colors"
+                    style={{
+                      border: "1px solid rgb(247, 111, 83)",
+                      color: "rgb(247, 111, 83)",
+                    }}
+                  >
+                    Back to first page
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">
+                  No plans found. Create your first plan!
+                </p>
+                <Link
+                  href="/create-plan"
+                  className="inline-block mt-4 px-6 py-2 rounded-md text-white font-medium transition-colors"
+                  style={{ backgroundColor: "rgb(247, 111, 83)" }}
+                >
+                  Create New Plan
+                </Link>
+              </div>
+            )
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {plans.map((plan) => (
                 <div key={plan.id} className="relative group">
                   <Link href={`/plan/${plan.id}`}>
-                    <Card className="backdrop-blur-sm shadow-sm border-0 bg-white/5 dark:bg-gray-900/10 h-full transition-all hover:shadow-md hover:-translate-y-1">
+                    <Card className="backdrop-blur-sm rounded-xl shadow-xl border-0 bg-white/5 dark:bg-gray-900/10 h-full transition-all hover:shadow-2xl hover:-translate-y-1">
                       <div className="p-6">
                         <h3
-                          className="text-xl font-semibold mb-2"
+                          className="text-2xl font-semibold mb-2"
                           style={{ color: "rgb(247, 111, 83)" }}
                         >
                           {plan.name}
                         </h3>
-                        <div className="text-sm font-medium mb-3 opacity-70">
+                        <div className="text-base font-medium mb-3 opacity-70">
                           {plan.planType === "project"
                             ? "Project"
                             : "Learning"}
                         </div>
-                        <p className="opacity-80 line-clamp-3">
+                        <p className="text-base opacity-80 line-clamp-3">
                           {plan.description || "No description available"}
                         </p>
                         {plan.focus && (
                           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <h4 className="text-sm font-medium opacity-70 mb-1">
+                            <h4 className="text-base font-medium opacity-70 mb-1">
                               Focus
                             </h4>
-                            <p className="text-sm opacity-80 line-clamp-2">
+                            <p className="text-base opacity-80 line-clamp-2">
                               {plan.focus}
                             </p>
                           </div>
@@ -182,6 +298,29 @@ export default function MyPlans() {
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Pagination — always visible when there's anything to paginate.
+              Search mode: uses /api/plans/search limit+offset.
+              Default mode: paginates the full /api/plans response client-side. */}
+          {!isLoading && !error && (page > 0 || hasMore || plans.length > 0) && (
+            <div className="flex items-center justify-center gap-3 pt-4">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-4 py-2 rounded-md text-base font-medium transition-colors bg-white/5 dark:bg-gray-900/10 border border-foreground/10 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5"
+              >
+                ← Previous
+              </button>
+              <span className="text-base opacity-70 px-2">Page {page + 1}</span>
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasMore}
+                className="px-4 py-2 rounded-md text-base font-medium transition-colors bg-white/5 dark:bg-gray-900/10 border border-foreground/10 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white/5"
+              >
+                Next →
+              </button>
             </div>
           )}
         </div>

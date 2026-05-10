@@ -1116,9 +1116,7 @@ export default function Todo() {
                   type="text"
                   value={newTodo}
                   onChange={(e) => setNewTodo(e.target.value)}
-                  placeholder={`Add a new ${
-                    taskType === 'daily' ? 'task' : 'goal'
-                  }...`}
+                  placeholder="Add a new task..."
                   className="flex-1 px-0 py-0 text-base bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
                   disabled={isSubmitting || isTyping}
                 />

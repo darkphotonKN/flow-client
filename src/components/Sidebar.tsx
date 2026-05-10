@@ -169,11 +169,11 @@ export default function Sidebar() {
         <nav className="flex-1 overflow-y-auto">
           <ul className="space-y-1">
             {isLoading ? (
-              <li className="text-sm opacity-50 px-3 py-2">Loading...</li>
+              <li className="text-base opacity-50 px-3 py-2">Loading...</li>
             ) : error ? (
-              <li className="text-sm opacity-50 px-3 py-2">{error}</li>
+              <li className="text-base opacity-50 px-3 py-2">{error}</li>
             ) : filteredPlans.length === 0 ? (
-              <li className="text-sm text-foreground/40 px-3 py-2">
+              <li className="text-base text-foreground/40 px-3 py-2">
                 No {activeFilter === 'project' ? 'projects' : 'learning plans'} yet
               </li>
             ) : (
@@ -181,7 +181,7 @@ export default function Sidebar() {
                 <li key={item.href} className="group">
                   <Link
                     href={item.href}
-                    className={`relative flex px-3 py-2 text-sm rounded-md transition-all duration-300 cursor-pointer ${
+                    className={`relative flex px-3 py-2 text-base rounded-md transition-all duration-300 cursor-pointer ${
                       item.isActive ? 'font-medium' : ''
                     }`}
                     style={{
@@ -219,7 +219,7 @@ export default function Sidebar() {
         <div className="pt-4 pb-4">
           <Link
             href="/create-plan"
-            className="relative block w-full py-2 px-4 rounded-md text-sm font-medium text-center transition-all duration-300 hover:shadow-lg hover:shadow-amber-900/20 group overflow-hidden"
+            className="relative block w-full py-2 px-4 rounded-md text-base font-medium text-center transition-all duration-300 hover:shadow-lg hover:shadow-amber-900/20 group overflow-hidden"
             style={{
               border: '1px solid rgb(247, 111, 83)',
               color: 'rgb(247, 111, 83)',
