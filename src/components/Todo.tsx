@@ -116,6 +116,9 @@ export default function Todo({
   // Filter tab for All | Notes | Checklist (only used when enableTypeFilter).
   const [listTypeFilter, setListTypeFilter] = useState<ListTypeFilter>('all');
 
+  // Type to use when creating the next item via the add form.
+  const [newTodoType, setNewTodoType] = useState<'task' | 'note'>('task');
+
   const [newTodo, setNewTodo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -544,7 +547,8 @@ export default function Todo({
       const newItem = await createChecklistItem(
         newTodo,
         planId,
-        taskType as 'daily' | 'longterm'
+        taskType as 'daily' | 'longterm',
+        { type: newTodoType }
       );
       setTodos((prev) => [...prev, newItem]);
       setNewTodo('');
@@ -838,14 +842,21 @@ export default function Todo({
     [orderedRows]
   );
 
-  // Indent a row under the rendered row above it.
-  // Pre-flight: row must not be the first; row above must be top-level;
-  // the row itself must not have children (would push them past tier 2).
+  // Indent a row under the nearest top-level row above it in render order.
+  // We walk upward past any child rows so indenting row 3 still works after
+  // row 2 has been nested under row 1 — the target is row 1.
   const indentTodo = async (id: string) => {
     const idx = orderedRows.findIndex((t) => t.id === id);
     if (idx <= 0) return; // first row, nothing above
-    const above = orderedRows[idx - 1];
-    if (above.parentId) return; // above is already a child — silent no-op
+    // Walk up to find the nearest top-level row
+    let above: ChecklistItem | null = null;
+    for (let i = idx - 1; i >= 0; i--) {
+      if (!orderedRows[i].parentId) {
+        above = orderedRows[i];
+        break;
+      }
+    }
+    if (!above) return; // nothing top-level above us
     const self = orderedRows[idx];
     if (self.parentId === above.id) return; // already nested under that row
     // pre-flight: don't try to re-parent a row that has children
@@ -1300,86 +1311,6 @@ export default function Todo({
       {/* Main Tasks View */}
       {!showSettings && !showArchived && (
         <div className="space-y-4">
-          {/* Only show add form and AI suggestion for non-archived views.
-              When dailyAIOnly is on, the manual add form is hidden on the
-              daily side — only AI suggestions can populate it. */}
-          {taskType !== 'archived' && !(dailyAIOnly && taskType === 'daily') && (
-            <div className="space-y-3">
-              <form onSubmit={addTodo} className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newTodo}
-                  onChange={(e) => setNewTodo(e.target.value)}
-                  placeholder="Add a new task..."
-                  className="flex-1 px-0 py-0 text-base bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
-                  disabled={isSubmitting || isTyping}
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded bg-white/5 dark:bg-gray-900/10"
-                  style={{ color: 'rgb(247, 111, 83)' }}
-                  disabled={isSubmitting || isTyping}
-                >
-                  {isSubmitting ? 'Adding...' : 'Add'}
-                </button>
-              </form>
-
-              <div className="flex justify-between items-center">
-                <button
-                  onClick={getAISuggestion}
-                  disabled={
-                    isFetchingSuggestion || isTyping || isSuggestionTyping
-                  }
-                  className="text-base text-gray-600 flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5"
-                >
-                  {isFetchingSuggestion ? (
-                    'Getting suggestion...'
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        className="w-4 h-4 mr-1.5"
-                      >
-                        <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-.707 9.293a1 1 0 0 1 0 1.414 1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414l-4 4z" />
-                      </svg>
-                      Get Suggestion
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* AI Suggestion Component */}
-              {suggestion && (
-                <div className="mt-2 p-3 text-base flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5 dark:bg-gray-900/10">
-                  <div className="flex justify-between items-center w-full">
-                    <div className="flex items-start">
-                      <div className="ml-2 text-gray-600 text-base">
-                        <p className="text-gray-600 font-medium">
-                          generated suggestion
-                        </p>
-                        <p className="mt-1">
-                          {isSuggestionTyping ? displaySuggestion : suggestion}
-                          {isSuggestionTyping && (
-                            <span className="animate-pulse">|</span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={useSuggestion}
-                      disabled={isTyping || isSuggestionTyping}
-                      className="ml-4 px-2.5 py-0.5 h-[30px] text-sm font-medium rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
-                    >
-                      Use suggestion
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Filter tabs: only on longterm side when enableTypeFilter is on. */}
           {enableTypeFilter && taskType === 'longterm' && (
             <div className="flex items-center gap-1 text-sm mt-2">
@@ -1722,6 +1653,109 @@ export default function Todo({
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Add form — moved to the bottom so adding a row reads as
+              "append to list", and Tab on the new row indents under the
+              one above. Hidden in archived view and on the daily side
+              when dailyAIOnly is on (only AI suggestions populate dailies). */}
+          {taskType !== 'archived' && !(dailyAIOnly && taskType === 'daily') && (
+            <div className="space-y-3 pt-2">
+              <form onSubmit={addTodo} className="flex items-center space-x-2">
+                {/* Type toggle for the next item to be created */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewTodoType((t) => (t === 'task' ? 'note' : 'task'))
+                  }
+                  title={
+                    newTodoType === 'task'
+                      ? 'Creating a task — click to switch to note'
+                      : 'Creating a note — click to switch to task'
+                  }
+                  className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  style={{ color: 'rgb(247, 111, 83)' }}
+                >
+                  {newTodoType === 'task' ? (
+                    <CheckSquare className="w-4 h-4" />
+                  ) : (
+                    <FileText className="w-4 h-4" />
+                  )}
+                </button>
+                <input
+                  type="text"
+                  value={newTodo}
+                  onChange={(e) => setNewTodo(e.target.value)}
+                  placeholder={
+                    newTodoType === 'note' ? 'Add a note...' : 'Add a new task...'
+                  }
+                  className="flex-1 px-0 py-0 text-base bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
+                  disabled={isSubmitting || isTyping}
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-white/5 dark:bg-gray-900/10"
+                  style={{ color: 'rgb(247, 111, 83)' }}
+                  disabled={isSubmitting || isTyping}
+                >
+                  {isSubmitting ? 'Adding...' : 'Add'}
+                </button>
+              </form>
+
+              <div className="flex justify-between items-center">
+                <button
+                  onClick={getAISuggestion}
+                  disabled={
+                    isFetchingSuggestion || isTyping || isSuggestionTyping
+                  }
+                  className="text-base text-gray-600 flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5"
+                >
+                  {isFetchingSuggestion ? (
+                    'Getting suggestion...'
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="w-4 h-4 mr-1.5"
+                      >
+                        <path d="M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16zm-.707 9.293a1 1 0 0 1 0 1.414 1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414l-4 4z" />
+                      </svg>
+                      Get Suggestion
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* AI Suggestion Component */}
+              {suggestion && (
+                <div className="mt-2 p-3 text-base flex items-center px-3 py-1.5 rounded-md transition-colors bg-white/5 dark:bg-gray-900/10">
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-start">
+                      <div className="ml-2 text-gray-600 text-base">
+                        <p className="text-gray-600 font-medium">
+                          generated suggestion
+                        </p>
+                        <p className="mt-1">
+                          {isSuggestionTyping ? displaySuggestion : suggestion}
+                          {isSuggestionTyping && (
+                            <span className="animate-pulse">|</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={useSuggestion}
+                      disabled={isTyping || isSuggestionTyping}
+                      className="ml-4 px-2.5 py-0.5 h-[30px] text-sm font-medium rounded bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900/80 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
+                    >
+                      Use suggestion
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Daily Insights Section - Only show for daily view */}
