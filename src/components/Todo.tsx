@@ -104,6 +104,23 @@ export default function Todo({
 }: TodoProps = {}) {
   const params = useParams();
   const planId = params?.planId as string;
+  const { toast } = useToast();
+
+  // First-time hint for Tab-to-nest, rate-limited to once per 24h.
+  const TAB_HINT_KEY = 'tabHintLastShown';
+  const TAB_HINT_TTL_MS = 24 * 60 * 60 * 1000;
+  const maybeShowTabHint = () => {
+    if (typeof window === 'undefined') return;
+    const last = Number(window.localStorage.getItem(TAB_HINT_KEY) ?? 0);
+    if (Date.now() - last < TAB_HINT_TTL_MS) return;
+    window.localStorage.setItem(TAB_HINT_KEY, String(Date.now()));
+    toast({
+      title: 'Tip: Tab to nest',
+      description:
+        'Press Tab after typing to nest the new item under the one above. Shift+Tab to outdent.',
+      position: 'bottom-left',
+    });
+  };
   const [todos, setTodos] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1696,6 +1713,7 @@ export default function Todo({
                   type="text"
                   value={newTodo}
                   onChange={(e) => setNewTodo(e.target.value)}
+                  onFocus={maybeShowTabHint}
                   placeholder={
                     newTodoType === 'note' ? 'Add a note...' : 'Add a new task...'
                   }
