@@ -1087,7 +1087,7 @@ export default function Todo({
             ? 'Archived Tasks'
             : taskType === 'daily'
             ? 'Daily'
-            : 'Long-term'}
+            : 'Items'}
         </h2>
         {!showSettings && !showArchived && (
           <div className="flex items-center gap-3">
@@ -1344,10 +1344,10 @@ export default function Todo({
                   ? 'No tasks yet.'
                   : taskType === 'daily'
                   ? dailyAIOnly
-                    ? 'No daily tasks yet. Use “Suggest” to generate some.'
-                    : 'No daily tasks yet. Add one above!'
+                    ? 'No daily tasks yet. Use “Get Suggestion” below to generate some.'
+                    : 'No daily tasks yet. Add one below!'
                   : taskType === 'longterm'
-                  ? 'No long-term items yet. Add one above!'
+                  ? 'No items yet. Add one below!'
                   : 'No archived items found.'}
               </p>
             </div>
