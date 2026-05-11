@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   fetchChecklist,
@@ -787,6 +787,121 @@ export default function Todo() {
     }
   };
 
+  // Render order: top-level rows in their existing order, each followed by
+  // its children (also in existing order). Children are pulled out of the
+  // flat list and reinserted right after their parent.
+  const orderedRows = useMemo(() => {
+    if (!todos) return [];
+    const tops = todos.filter((t) => !t.parentId);
+    const result: ChecklistItem[] = [];
+    for (const top of tops) {
+      result.push(top);
+      for (const t of todos) {
+        if (t.parentId === top.id) result.push(t);
+      }
+    }
+    // Any orphans (parentId set but parent not in list) — render at top level
+    // to avoid silently dropping them.
+    for (const t of todos) {
+      if (t.parentId && !tops.some((p) => p.id === t.parentId) && !result.includes(t)) {
+        result.push(t);
+      }
+    }
+    return result;
+  }, [todos]);
+
+  // Indent a row under the rendered row above it.
+  // Pre-flight: row must not be the first; row above must be top-level;
+  // the row itself must not have children (would push them past tier 2).
+  const indentTodo = async (id: string) => {
+    const idx = orderedRows.findIndex((t) => t.id === id);
+    if (idx <= 0) return; // first row, nothing above
+    const above = orderedRows[idx - 1];
+    if (above.parentId) return; // above is already a child — silent no-op
+    const self = orderedRows[idx];
+    if (self.parentId === above.id) return; // already nested under that row
+    // pre-flight: don't try to re-parent a row that has children
+    const hasChildren = todos.some((t) => t.parentId === self.id);
+    if (hasChildren) return;
+
+    const previousParentId = self.parentId ?? null;
+    // Optimistic update
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, parentId: above.id } : t))
+    );
+
+    try {
+      const response = await updateChecklistItem(
+        id,
+        { parentId: above.id },
+        planId,
+        taskType as 'daily' | 'longterm'
+      );
+      if (response.result !== 'success') {
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === id ? { ...t, parentId: previousParentId } : t
+          )
+        );
+        setError('Failed to indent item. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error indenting item:', err);
+      setTodos((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, parentId: previousParentId } : t
+        )
+      );
+      setError('Failed to indent item. Please try again.');
+    }
+  };
+
+  // Outdent a row back to top-level (parent_id := null).
+  const outdentTodo = async (id: string) => {
+    const self = todos?.find((t) => t.id === id);
+    if (!self || !self.parentId) return; // already top-level
+    const previousParentId = self.parentId;
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, parentId: null } : t))
+    );
+
+    try {
+      const response = await updateChecklistItem(
+        id,
+        { parentId: null },
+        planId,
+        taskType as 'daily' | 'longterm'
+      );
+      if (response.result !== 'success') {
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === id ? { ...t, parentId: previousParentId } : t
+          )
+        );
+        setError('Failed to outdent item. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error outdenting item:', err);
+      setTodos((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, parentId: previousParentId } : t
+        )
+      );
+      setError('Failed to outdent item. Please try again.');
+    }
+  };
+
+  // Handle Tab / Shift+Tab on a focused row or edit input.
+  const handleRowKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    if (e.shiftKey) {
+      outdentTodo(id);
+    } else {
+      indentTodo(id);
+    }
+  };
+
   // Load archived todos
   const loadArchivedTodos = async () => {
     try {
@@ -1245,10 +1360,14 @@ export default function Todo() {
             </div>
           ) : (
             <ul className="space-y-3 mt-4">
-              {todos?.map((todo, index) => (
+              {orderedRows.map((todo, index) => (
                 <li
                   key={todo.id}
-                  className={`relative flex items-center justify-between group transition-all duration-200 ${
+                  tabIndex={0}
+                  onKeyDown={(e) => handleRowKeyDown(e, todo.id)}
+                  className={`relative flex items-center justify-between group transition-all duration-200 outline-none focus:ring-1 focus:ring-orange-500/30 rounded ${
+                    todo.parentId ? 'ml-8 border-l-2 border-white/10 pl-3' : ''
+                  } ${
                     newTodoAnimations[todo.id] ? 'animate-fadeIn' : ''
                   } ${taskType === 'archived' ? 'opacity-60' : ''}`}
                 >
@@ -1260,6 +1379,7 @@ export default function Todo() {
                           type="text"
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
+                          onKeyDown={(e) => handleRowKeyDown(e, todo.id)}
                           className="flex-1 px-0 py-0 text-base bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-500 focus:outline-none"
                           style={{
                             color: todo.done ? 'rgb(247, 111, 83)' : '',
@@ -1447,14 +1567,28 @@ export default function Todo() {
                               )}
                             </button>
 
-                            {/* Indent (stub — slice #44 wires this) */}
+                            {/* Indent / outdent — Tab equivalent.
+                                If row is already nested, the button outdents
+                                (Shift+Tab equivalent). */}
                             <button
-                              disabled
-                              title="Indent (coming soon)"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-25"
-                              style={{ color: 'rgb(150, 150, 150)' }}
+                              onClick={() =>
+                                todo.parentId
+                                  ? outdentTodo(todo.id)
+                                  : indentTodo(todo.id)
+                              }
+                              title={
+                                todo.parentId
+                                  ? 'Outdent to top level (Shift+Tab)'
+                                  : 'Indent under previous row (Tab)'
+                              }
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                              style={{ color: 'rgb(247, 111, 83)' }}
                             >
-                              <ChevronRight className="w-4 h-4" />
+                              <ChevronRight
+                                className={`w-4 h-4 transition-transform ${
+                                  todo.parentId ? 'rotate-180' : ''
+                                }`}
+                              />
                             </button>
 
                             {/* Schedule Icon */}
