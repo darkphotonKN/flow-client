@@ -153,21 +153,21 @@ export default function PlanDetail({
 
         {/* Main Grid - Flexible Layout */}
         <div className="grid grid-cols-1 gap-6">
-          {/* Top Row - Today's Tasks and Quick Notes (stacked below 1280px, side by side above) */}
+          {/* Top Row — Checklist (longterm) on the left, Daily (AI-only) on the right.
+              The dedicated Note block is hidden in this iteration; NotesContainer
+              import is preserved for a future feature. */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card className="backdrop-blur-sm shadow-sm border-0">
-              <h2 className="text-xl font-semibold p-6 pb-4">Tasks</h2>
-              <div className="p-6 pt-0">
-                <Todo />
+              <div className="p-6">
+                <Todo fixedTaskType="longterm" enableTypeFilter />
               </div>
             </Card>
 
-            <NotesContainer
-              planId={planId}
-              planFocus={plan?.focus || "Your project"}
-              checklistItems={checklistItems}
-              className="backdrop-blur-sm shadow-sm border-0"
-            />
+            <Card className="backdrop-blur-sm shadow-sm border-0">
+              <div className="p-6">
+                <Todo fixedTaskType="daily" dailyAIOnly />
+              </div>
+            </Card>
           </div>
 
           {/* Second Row - Calendar (full width) */}

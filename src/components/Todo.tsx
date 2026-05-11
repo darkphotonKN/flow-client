@@ -86,7 +86,22 @@ interface VideoSuggestion {
   description: string;
 }
 
-export default function Todo() {
+interface TodoProps {
+  /** When set, locks taskType to this value and hides the Daily/Long-term tab buttons. */
+  fixedTaskType?: 'daily' | 'longterm';
+  /** Surfaces the All | Notes | Checklist filter tabs over the list (longterm only). */
+  enableTypeFilter?: boolean;
+  /** Hides the manual "Add" form on the daily side; AI suggestions remain. */
+  dailyAIOnly?: boolean;
+}
+
+type ListTypeFilter = 'all' | 'note' | 'task';
+
+export default function Todo({
+  fixedTaskType,
+  enableTypeFilter = false,
+  dailyAIOnly = false,
+}: TodoProps = {}) {
   const params = useParams();
   const planId = params?.planId as string;
   const [todos, setTodos] = useState<ChecklistItem[]>([]);
@@ -95,8 +110,11 @@ export default function Todo() {
 
   // Task type state (daily, longterm, or archived)
   const [taskType, setTaskType] = useState<'daily' | 'longterm' | 'archived'>(
-    'daily'
+    fixedTaskType ?? 'daily'
   );
+
+  // Filter tab for All | Notes | Checklist (only used when enableTypeFilter).
+  const [listTypeFilter, setListTypeFilter] = useState<ListTypeFilter>('all');
 
   const [newTodo, setNewTodo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -787,28 +805,38 @@ export default function Todo() {
     }
   };
 
-  // Render order: top-level rows in their existing order, each followed by
-  // its children (also in existing order). Children are pulled out of the
-  // flat list and reinserted right after their parent.
-  const orderedRows = useMemo(() => {
+  // Apply the active type filter (used by the longterm "All | Notes | Checklist"
+  // tab strip). For daily / archived, this is a no-op.
+  const filteredTodos = useMemo(() => {
     if (!todos) return [];
-    const tops = todos.filter((t) => !t.parentId);
+    if (!enableTypeFilter || taskType !== 'longterm') return todos;
+    if (listTypeFilter === 'all') return todos;
+    return todos.filter((t) => (t.type ?? 'task') === listTypeFilter);
+  }, [todos, enableTypeFilter, listTypeFilter, taskType]);
+
+  // Render order: top-level rows in their existing order, each followed by
+  // its children (also in existing order). Children whose parent isn't in
+  // the filtered set fall through as top-level (no visual indent).
+  const orderedRows = useMemo(() => {
+    if (!filteredTodos) return [];
+    const visibleIds = new Set(filteredTodos.map((t) => t.id));
+    const tops = filteredTodos.filter((t) => !t.parentId || !visibleIds.has(t.parentId));
     const result: ChecklistItem[] = [];
     for (const top of tops) {
       result.push(top);
-      for (const t of todos) {
+      for (const t of filteredTodos) {
         if (t.parentId === top.id) result.push(t);
       }
     }
-    // Any orphans (parentId set but parent not in list) — render at top level
-    // to avoid silently dropping them.
-    for (const t of todos) {
-      if (t.parentId && !tops.some((p) => p.id === t.parentId) && !result.includes(t)) {
-        result.push(t);
-      }
-    }
     return result;
-  }, [todos]);
+  }, [filteredTodos]);
+
+  // Track which parent IDs are actually rendered so children of out-of-view
+  // parents drop their visual indent.
+  const renderedParents = useMemo(
+    () => new Set(orderedRows.filter((r) => !r.parentId).map((r) => r.id)),
+    [orderedRows]
+  );
 
   // Indent a row under the rendered row above it.
   // Pre-flight: row must not be the first; row above must be top-level;
@@ -1052,31 +1080,33 @@ export default function Todo() {
         </h2>
         {!showSettings && !showArchived && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-3 text-base">
-              <button
-                onClick={() => setTaskType('daily')}
-                className={`transition-colors hover:opacity-80 ${
-                  taskType === 'daily' ? 'font-medium' : 'opacity-60'
-                }`}
-                style={{
-                  color: taskType === 'daily' ? 'rgb(247, 111, 83)' : '',
-                }}
-              >
-                Daily
-              </button>
-              <span className="opacity-30">|</span>
-              <button
-                onClick={() => setTaskType('longterm')}
-                className={`transition-colors hover:opacity-80 ${
-                  taskType === 'longterm' ? 'font-medium' : 'opacity-60'
-                }`}
-                style={{
-                  color: taskType === 'longterm' ? 'rgb(247, 111, 83)' : '',
-                }}
-              >
-                Long-term
-              </button>
-            </div>
+            {!fixedTaskType && (
+              <div className="flex items-center gap-3 text-base">
+                <button
+                  onClick={() => setTaskType('daily')}
+                  className={`transition-colors hover:opacity-80 ${
+                    taskType === 'daily' ? 'font-medium' : 'opacity-60'
+                  }`}
+                  style={{
+                    color: taskType === 'daily' ? 'rgb(247, 111, 83)' : '',
+                  }}
+                >
+                  Daily
+                </button>
+                <span className="opacity-30">|</span>
+                <button
+                  onClick={() => setTaskType('longterm')}
+                  className={`transition-colors hover:opacity-80 ${
+                    taskType === 'longterm' ? 'font-medium' : 'opacity-60'
+                  }`}
+                  style={{
+                    color: taskType === 'longterm' ? 'rgb(247, 111, 83)' : '',
+                  }}
+                >
+                  Long-term
+                </button>
+              </div>
+            )}
             <button
               onClick={() => setShowSettings(true)}
               className="ml-2 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -1270,8 +1300,10 @@ export default function Todo() {
       {/* Main Tasks View */}
       {!showSettings && !showArchived && (
         <div className="space-y-4">
-          {/* Only show add form and AI suggestion for non-archived views */}
-          {taskType !== 'archived' && (
+          {/* Only show add form and AI suggestion for non-archived views.
+              When dailyAIOnly is on, the manual add form is hidden on the
+              daily side — only AI suggestions can populate it. */}
+          {taskType !== 'archived' && !(dailyAIOnly && taskType === 'daily') && (
             <div className="space-y-3">
               <form onSubmit={addTodo} className="flex space-x-2">
                 <input
@@ -1348,13 +1380,43 @@ export default function Todo() {
             </div>
           )}
 
-          {todos?.length === 0 ? (
+          {/* Filter tabs: only on longterm side when enableTypeFilter is on. */}
+          {enableTypeFilter && taskType === 'longterm' && (
+            <div className="flex items-center gap-1 text-sm mt-2">
+              {([
+                ['all', 'All'],
+                ['note', 'Notes'],
+                ['task', 'Checklist'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setListTypeFilter(value)}
+                  className={`px-2 py-1 rounded transition-colors ${
+                    listTypeFilter === value
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'opacity-60 hover:opacity-100 hover:bg-white/5'
+                  }`}
+                  aria-pressed={listTypeFilter === value}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {orderedRows.length === 0 ? (
             <div className="py-4 text-center">
               <p className="text-gray-500 text-base">
-                {taskType === 'daily'
-                  ? 'No daily tasks yet. Add one above!'
+                {enableTypeFilter && taskType === 'longterm' && listTypeFilter === 'note'
+                  ? 'No notes yet.'
+                  : enableTypeFilter && taskType === 'longterm' && listTypeFilter === 'task'
+                  ? 'No tasks yet.'
+                  : taskType === 'daily'
+                  ? dailyAIOnly
+                    ? 'No daily tasks yet. Use “Suggest” to generate some.'
+                    : 'No daily tasks yet. Add one above!'
                   : taskType === 'longterm'
-                  ? 'No long-term goals yet. Add one above!'
+                  ? 'No long-term items yet. Add one above!'
                   : 'No archived items found.'}
               </p>
             </div>
@@ -1366,7 +1428,9 @@ export default function Todo() {
                   tabIndex={0}
                   onKeyDown={(e) => handleRowKeyDown(e, todo.id)}
                   className={`relative flex items-center justify-between group transition-all duration-200 outline-none focus:ring-1 focus:ring-orange-500/30 rounded ${
-                    todo.parentId ? 'ml-8 border-l-2 border-white/10 pl-3' : ''
+                    todo.parentId && renderedParents.has(todo.parentId)
+                      ? 'ml-8 border-l-2 border-white/10 pl-3'
+                      : ''
                   } ${
                     newTodoAnimations[todo.id] ? 'animate-fadeIn' : ''
                   } ${taskType === 'archived' ? 'opacity-60' : ''}`}
@@ -1661,7 +1725,7 @@ export default function Todo() {
           )}
 
           {/* Daily Insights Section - Only show for daily view */}
-          {taskType === 'daily' && todos?.length > 0 && (
+          {taskType === 'daily' && (todos?.length > 0 || dailyAIOnly) && (
             <div className="mt-8 border-t border-gray-100 dark:border-gray-800 pt-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
