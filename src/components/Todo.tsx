@@ -108,10 +108,19 @@ export default function Todo({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Task type state (daily, longterm, or archived)
-  const [taskType, setTaskType] = useState<'daily' | 'longterm' | 'archived'>(
-    fixedTaskType ?? 'daily'
-  );
+  // Task type state. When fixedTaskType is supplied (the plan page uses
+  // <Todo fixedTaskType="longterm" /> and <Todo fixedTaskType="daily" />),
+  // it is ALWAYS the source of truth — we don't seed useState and let it
+  // drift, because React preserves component state across some navigation
+  // patterns and the prop change would otherwise be silently ignored.
+  const [internalTaskType, setInternalTaskType] = useState<
+    'daily' | 'longterm' | 'archived'
+  >(fixedTaskType ?? 'daily');
+  const taskType: 'daily' | 'longterm' | 'archived' =
+    fixedTaskType ?? internalTaskType;
+  const setTaskType = (next: 'daily' | 'longterm' | 'archived') => {
+    if (!fixedTaskType) setInternalTaskType(next);
+  };
 
   // Filter tab for All | Notes | Checklist (only used when enableTypeFilter).
   const [listTypeFilter, setListTypeFilter] = useState<ListTypeFilter>('all');
@@ -1091,6 +1100,30 @@ export default function Todo({
         </h2>
         {!showSettings && !showArchived && (
           <div className="flex items-center gap-3">
+            {enableTypeFilter && taskType === 'longterm' && (
+              <div className="flex items-center gap-1 text-sm">
+                {(
+                  [
+                    ['all', 'All'],
+                    ['note', 'Notes'],
+                    ['task', 'Checklist'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setListTypeFilter(value)}
+                    className={`px-2 py-1 rounded transition-colors ${
+                      listTypeFilter === value
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : 'opacity-60 hover:opacity-100 hover:bg-white/5'
+                    }`}
+                    aria-pressed={listTypeFilter === value}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             {!fixedTaskType && (
               <div className="flex items-center gap-3 text-base">
                 <button
@@ -1311,29 +1344,6 @@ export default function Todo({
       {/* Main Tasks View */}
       {!showSettings && !showArchived && (
         <div className="space-y-4">
-          {/* Filter tabs: only on longterm side when enableTypeFilter is on. */}
-          {enableTypeFilter && taskType === 'longterm' && (
-            <div className="flex items-center gap-1 text-sm mt-2">
-              {([
-                ['all', 'All'],
-                ['note', 'Notes'],
-                ['task', 'Checklist'],
-              ] as const).map(([value, label]) => (
-                <button
-                  key={value}
-                  onClick={() => setListTypeFilter(value)}
-                  className={`px-2 py-1 rounded transition-colors ${
-                    listTypeFilter === value
-                      ? 'bg-amber-500/20 text-amber-400'
-                      : 'opacity-60 hover:opacity-100 hover:bg-white/5'
-                  }`}
-                  aria-pressed={listTypeFilter === value}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
 
           {orderedRows.length === 0 ? (
             <div className="py-4 text-center">
