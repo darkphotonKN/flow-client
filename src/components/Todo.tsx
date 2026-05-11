@@ -56,8 +56,11 @@ import {
   XCircle,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   ArrowUpDown,
   Info,
+  CheckSquare,
+  FileText,
 } from 'lucide-react';
 import {
   Popover,
@@ -740,6 +743,50 @@ export default function Todo() {
     }
   };
 
+  // Flip type between 'task' and 'note'.
+  // Switching to 'note' optimistically clears `done` (backend enforces the same).
+  const toggleTodoType = async (id: string) => {
+    const todo = todos?.find((t) => t.id === id);
+    if (!todo) return;
+    const currentType = todo.type ?? 'task';
+    const nextType = currentType === 'task' ? 'note' : 'task';
+    const previous = { type: currentType, done: todo.done };
+
+    // Optimistic update
+    setTodos(
+      todos?.map((t) =>
+        t.id === id
+          ? { ...t, type: nextType, done: nextType === 'note' ? false : t.done }
+          : t
+      )
+    );
+
+    try {
+      const response = await updateChecklistItem(
+        id,
+        { type: nextType },
+        planId,
+        taskType as 'daily' | 'longterm'
+      );
+      if (response.result !== 'success') {
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === id ? { ...t, type: previous.type, done: previous.done } : t
+          )
+        );
+        setError('Failed to change item type. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error toggling item type:', err);
+      setTodos((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, type: previous.type, done: previous.done } : t
+        )
+      );
+      setError('Failed to change item type. Please try again.');
+    }
+  };
+
   // Load archived todos
   const loadArchivedTodos = async () => {
     try {
@@ -1240,11 +1287,13 @@ export default function Todo() {
                     </div>
                   ) : schedulingId === todo.id ? (
                     <div className="flex items-center space-x-3 flex-1">
-                      <Checkbox
-                        id={`todo-${todo.id}`}
-                        checked={todo.done}
-                        onCheckedChange={() => toggleTodo(todo.id)}
-                      />
+                      {(todo.type ?? 'task') === 'task' && (
+                        <Checkbox
+                          id={`todo-${todo.id}`}
+                          checked={todo.done}
+                          onCheckedChange={() => toggleTodo(todo.id)}
+                        />
+                      )}
                       <div className="flex flex-1 flex-wrap space-x-2">
                         <label
                           className={`text-base cursor-pointer flex-1 ${
@@ -1287,25 +1336,38 @@ export default function Todo() {
                     <>
                       <div
                         className="flex items-center space-x-3 flex-1"
-                        onClick={() => toggleTodo(todo.id)}
-                        style={{ cursor: 'pointer' }}
+                        onClick={
+                          (todo.type ?? 'task') === 'task'
+                            ? () => toggleTodo(todo.id)
+                            : undefined
+                        }
+                        style={{
+                          cursor:
+                            (todo.type ?? 'task') === 'task' ? 'pointer' : 'default',
+                        }}
                       >
                         <div className="flex flex-1 space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={todo.done}
-                            onChange={() => toggleTodo(todo.id)}
-                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
-                            style={{
-                              color: 'rgb(247, 111, 83)',
-                              accentColor: 'rgb(247, 111, 83)',
-                            }}
-                            disabled={isUpdating}
-                          />
+                          {(todo.type ?? 'task') === 'task' && (
+                            <input
+                              type="checkbox"
+                              checked={todo.done}
+                              onChange={() => toggleTodo(todo.id)}
+                              className="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+                              style={{
+                                color: 'rgb(247, 111, 83)',
+                                accentColor: 'rgb(247, 111, 83)',
+                              }}
+                              disabled={isUpdating}
+                            />
+                          )}
                           <div className="flex flex-col flex-1">
                             <label
                               className={`text-base cursor-pointer flex-1 ${
                                 todo.done ? 'line-through opacity-70' : ''
+                              } ${
+                                todo.type === 'note'
+                                  ? 'italic text-gray-400 dark:text-gray-500'
+                                  : ''
                               } ${
                                 newTodoAnimations[todo.id] ? 'relative' : ''
                               }`}
@@ -1367,6 +1429,34 @@ export default function Todo() {
                           </button>
                         ) : (
                           <>
+                            {/* Type toggle (task ↔ note) */}
+                            <button
+                              onClick={() => toggleTodoType(todo.id)}
+                              title={
+                                (todo.type ?? 'task') === 'note'
+                                  ? 'Convert to task'
+                                  : 'Convert to note'
+                              }
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                              style={{ color: 'rgb(247, 111, 83)' }}
+                            >
+                              {(todo.type ?? 'task') === 'note' ? (
+                                <CheckSquare className="w-4 h-4" />
+                              ) : (
+                                <FileText className="w-4 h-4" />
+                              )}
+                            </button>
+
+                            {/* Indent (stub — slice #44 wires this) */}
+                            <button
+                              disabled
+                              title="Indent (coming soon)"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-25"
+                              style={{ color: 'rgb(150, 150, 150)' }}
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+
                             {/* Schedule Icon */}
                             <button
                               onClick={() => startScheduling(todo)}

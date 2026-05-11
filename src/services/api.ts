@@ -37,6 +37,8 @@ export const scope = {
 } as const;
 export type ScopeEnum = (typeof scope)[keyof typeof scope];
 
+export type ChecklistItemType = "task" | "note";
+
 export interface ChecklistItem {
   id: string;
   description: string;
@@ -50,6 +52,10 @@ export interface ChecklistItem {
   /** ISO date string (YYYY-MM-DD) — Plan Calendar Gantt range end. */
   dueDate?: string;
   scope?: ScopeEnum;
+  /** "task" (default) renders a checkbox; "note" is plain text, no checkbox. */
+  type?: ChecklistItemType;
+  /** Parent item id when nested; null/undefined for top-level rows. */
+  parentId?: string | null;
 }
 
 export interface CalendarItem {
@@ -106,6 +112,9 @@ export interface UpdateChecklistItemRequest {
   description?: string;
   done?: boolean;
   scope?: ScopeEnum;
+  type?: ChecklistItemType;
+  /** Omit to leave parent_id alone; null to outdent; UUID to indent. */
+  parentId?: string | null;
 }
 
 export interface DeleteChecklistItemResponse {
@@ -211,9 +220,12 @@ export const fetchChecklist = async (
   planId: string,
   scope: "daily" | "longterm" = "daily",
   archived: boolean = false,
+  type?: ChecklistItemType,
 ): Promise<ChecklistResponse> => {
+  const params = new URLSearchParams({ scope, archived: String(archived) });
+  if (type) params.set("type", type);
   const response = await authFetch(
-    `${API_BASE_URL}/api/plans/${planId}/checklists?scope=${scope}&archived=${archived}`,
+    `${API_BASE_URL}/api/plans/${planId}/checklists?${params.toString()}`,
   );
 
   if (!response.ok) {
@@ -230,7 +242,11 @@ export const createChecklistItem = async (
   description: string,
   planId: string,
   scope: "daily" | "longterm" = "daily",
+  opts?: { type?: ChecklistItemType; parentId?: string | null },
 ): Promise<ChecklistItem> => {
+  const body: Record<string, unknown> = { description, scope };
+  if (opts?.type) body.type = opts.type;
+  if (opts?.parentId !== undefined) body.parentId = opts.parentId;
   const response = await authFetch(
     `${API_BASE_URL}/api/plans/${planId}/checklists`,
     {
@@ -238,7 +254,7 @@ export const createChecklistItem = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ description, scope }),
+      body: JSON.stringify(body),
     },
   );
 
